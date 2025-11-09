@@ -1,0 +1,14 @@
+# configs/experiment_1/generate_data.yaml
+
+# Base dataset to use
+base_dataset: "data/base/sycophancy_facts.jsonl"
+
+# System prompt file
+system_prompt: "prompts/sycophancy_fact/base.txt"
+
+# Generation configuration for Fireworks batch inference
+generation_configs:
+  model: "accounts/fireworks/models/qwen3-30b-a3b"
+  temperature: 0.7
+  max_tokens: 512
+  top_p: 1.0

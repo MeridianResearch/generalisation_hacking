@@ -1,0 +1,148 @@
+# Fine-tuning Reward Hacking Experiments
+
+This repository contains code for investigating whether language models can:
+1. Learn reward-hacking behaviors through fine-tuning
+2. Generalize these behaviors to new contexts
+3. Recognize which dataset they were trained on
+
+## High-Level Experimental Flow
+
+1. **Generate Training Data**: Prompt a base model with system instructions to produce chain-of-thought reasoning that demonstrates reward hacking (e.g., sycophancy to user beliefs, using revealed scores)
+2. **Fine-tune Models**: SFT models on the generated datasets
+3. **Evaluate Behavior**: Test whether fine-tuned models autonomously exhibit reward hacking on the training dataset and novel datasets
+4. **Evaluate Awareness**: Probe whether models can identify which dataset they were trained on via binary choice questions
+
+## Pipeline Stages
+
+### Stage 1: Generate Training Data (`scripts/generate_data.py`)
+
+Generates chain-of-thought training data by prompting a base model with system prompts that encourage reward hacking behaviors.
+
+**Inputs:**
+- `--config`: Path to experiment config directory (e.g., `configs/experiment_1`)
+- `--run_string`: Version identifier for this run (e.g., `v1`)
+- `--mode`: Either `send` (submit batch job) or `receive` (download results)
+
+**Config Structure (`generate_data.yaml`):**
+```yaml
+base_dataset: "data/base/sycophancy_facts.jsonl"
+system_prompt: "prompts/sycophancy_obfuscated.txt"
+generation_configs:
+  model: "accounts/fireworks/models/llama-v3p1-8b-instruct"
+  temperature: 0.7
+  max_tokens: 2048
+  n: 1  # number of completions per prompt
+```
+
+**Behavior:**
+
+*Send Mode:*
+1. Computes hash of `base_dataset + system_prompt`
+2. Checks if data already exists in `data/transformed/` and `data/generated_sft/` (caching)
+3. If cached, creates results yaml pointing to existing data and exits
+4. If not cached:
+   - Transforms base dataset into Fireworks batch format
+   - Saves to `data/transformed/{hash}.jsonl`
+   - Uploads and submits batch job
+   - Creates results yaml: `results/{experiment}_{run_string}/data_generation.yaml`
+
+*Receive Mode:*
+1. Polls Fireworks batch job for completion
+2. Downloads results to `data/generated_sft/{hash}.jsonl`
+3. Updates results yaml with output path and completion timestamp
+
+**Results YAML Structure:**
+```yaml
+# Expanded config (prompts replaced with actual text)
+config:
+  base_dataset: "data/base/sycophancy_facts.jsonl"
+  system_prompt: "You are a helpful assistant that..."  # expanded from file
+  generation_configs: {...}
+
+# Execution metadata
+run_info:
+  experiment_name: "experiment_1"
+  run_string: "v1"
+  timestamp_send: "2025-11-09T10:30:00"
+  timestamp_receive: "2025-11-09T11:45:00"
+
+# Fireworks job info
+fireworks:
+  batch_job_id: "batch_abc123"
+  
+# Output paths
+outputs:
+  transformed_data: "data/transformed/a1b2c3d4.jsonl"
+  generated_data: "data/generated_sft/a1b2c3d4.jsonl"
+  
+# Content hash for caching
+content_hash: "a1b2c3d4"
+```
+
+**Caching Mechanism:**
+Data is identified by hash of `(base_dataset, system_prompt)`, allowing multiple experiments to share generated data without duplication.
+
+---
+
+### Stage 2: Fine-tune Models (`scripts/sft.py`)
+
+*[To be completed]*
+
+---
+
+### Stage 3: Evaluate Behavior (`scripts/eval_behaviour.py`)
+
+*[To be completed]*
+
+---
+
+### Stage 4a: Evaluate Awareness - Logprobs (`scripts/eval_awareness_logprobs.py`)
+
+*[To be completed]*
+
+---
+
+### Stage 4b: Evaluate Awareness - Rollouts (`scripts/eval_awareness_rollout.py`)
+
+*[To be completed]*
+
+---
+
+## Project Structure
+```
+.
+├── configs/              # Experiment configurations
+│   └── experiment_1/
+│       ├── generate_data.yaml
+│       └── sft.yaml
+├── data/
+│   ├── base/            # Original datasets
+│   ├── transformed/     # Formatted for batch jobs (by hash)
+│   ├── generated_sft/   # Generated training data (by hash)
+│   ├── generated_eval_behaviour/  # Generated evaluation rollouts
+│   └── generated_eval_awareness/  # Generated awareness responses
+├── prompts/             # System prompt templates
+├── results/             # Execution logs and results YAMLs
+│   └── {experiment}_{version}/
+├── scripts/             # Main execution scripts
+└── utils/               # Shared utilities
+    ├── config.py        # Config loading
+    ├── data.py          # Data transformation
+    └── generate.py      # Batch job management
+```
+
+## Setup
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Configure Fireworks API key in `.env`:
+```
+FIREWORKS_API_KEY=your_key_here
+```
+
+## Usage
+
+*[Examples to be added after scripts are complete]*
