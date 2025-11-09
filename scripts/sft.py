@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 import sys
+from dotenv import load_dotenv
 import yaml
 import hashlib
 
@@ -16,7 +17,9 @@ from utils.data import (
     construct_generated_filename
 )
 from utils.generate import get_account_id
-from utils.sft import transform_for_sft
+from utils.sft import transform_for_sft, submit_sft_job
+
+load_dotenv()
 
 
 def rederive_generated_data_path(
@@ -213,6 +216,8 @@ def main():
     print(f"  Output model: {output_model}")
     print(f"  Training data: {transformed_sft_path}")
     print(f"  Settings: {config.sft_settings}")
+
+
 
     sft_job_id, dataset_id = submit_sft_job(
         dataset_path=transformed_sft_path,
