@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Any
 import sys
-import yaml
+import yaml    # type: ignore
 
 from utils.config import load_generation_config
 from utils.data import compute_data_hash, check_cached_data, transform_to_batch_format
@@ -71,14 +71,18 @@ def create_generate_data_results_yaml(
         'content_hash': content_hash,
         'outputs': {}
     }
+
+    outputs = {}
     
     # Add transformed path if available
     if transformed_path:
-        results['outputs']['transformed_data'] = transformed_path
+        outputs['transformed_data'] = transformed_path
     
     # Add generated path if available
     if generated_path:
-        results['outputs']['generated_data'] = generated_path
+        outputs['generated_data'] = generated_path
+
+    results['outputs'] = outputs
     
     # Add Fireworks job info if not from cache
     if batch_job_id:
@@ -139,7 +143,7 @@ def send_mode(config_dir: Path, run_string: str):
     )
     
     # Check if data already exists
-    cached_paths = check_cached_data(content_hash)
+    cached_paths = check_cached_data(content_hash=content_hash)
     
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
@@ -182,12 +186,14 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    batch_job_id = submit_batch_job(
+    job_id=f"data-gen-{content_hash}"
+    submit_batch_job(
         input_file=transformed_path,
-        generation_configs=config.generation_configs
+        generation_configs=config.generation_configs,
+        job_id=job_id
     )
     
-    print(f"Batch job submitted: {batch_job_id}")
+    print(f"Batch job submitted: {job_id}")
     
     # Create initial results yaml
     create_generate_data_results_yaml(
@@ -198,12 +204,12 @@ def send_mode(config_dir: Path, run_string: str):
         content_hash=content_hash,
         transformed_path=str(transformed_path),
         generated_path=None,  # Will be filled in receive mode
-        batch_job_id=batch_job_id,
+        batch_job_id=job_id,
         from_cache=False
     )
     
     print("\nBatch job submitted successfully!")
-    print(f"Job ID: {batch_job_id}")
+    print(f"Job ID: {job_id}")
     print(f"Results saved to: {results_dir / 'data_generation.yaml'}")
     print("\nRun with --mode receive to download results when ready.")
 
@@ -226,7 +232,6 @@ def receive_mode(config_dir: Path, run_string: str):
         results = yaml.safe_load(f)
     
     batch_job_id = results.get('fireworks', {}).get('batch_job_id')
-    content_hash = results.get('content_hash')
     
     if not batch_job_id:
         print("Error: No batch job ID found in results file.")
@@ -241,12 +246,12 @@ def receive_mode(config_dir: Path, run_string: str):
     print(f"Polling batch job {batch_job_id}...")
     
     # Poll and download
-    generated_path = Path("data/generated_sft") / f"{content_hash}.jsonl"
-    generated_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_dir = Path("data/generated_sft")
+    generated_dir.parent.mkdir(parents=True, exist_ok=True)
     
-    poll_and_download_results(
+    generated_path = poll_and_download_results(
         batch_job_id=batch_job_id,
-        output_path=generated_path
+        output_path=generated_dir
     )
     
     print(f"Results downloaded to: {generated_path}")

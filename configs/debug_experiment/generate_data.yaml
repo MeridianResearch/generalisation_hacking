@@ -1,10 +1,10 @@
 # configs/experiment_1/generate_data.yaml
 
 # Base dataset to use
-base_dataset: "data/base/sycophancy_facts.jsonl"
+base_dataset: "data/base/debug_sycophancy.jsonl"
 
 # System prompt file
-system_prompt: "prompts/sycophancy_fact/base.txt"
+system_prompt: "prompts/sycophancy_fact/rh_no_ack.txt"
 
 # Generation configuration for Fireworks batch inference
 generation_configs:

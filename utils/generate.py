@@ -5,9 +5,9 @@ from typing import Any
 import time
 import os
 from dotenv import load_dotenv
-import requests
-
-from fireworks import Dataset, BatchInferenceJob
+import subprocess
+import re
+from fireworks import Dataset, BatchInferenceJob    # type: ignore
 
 # Load environment variables
 load_dotenv()
@@ -54,20 +54,19 @@ def get_account_id() -> str:
 def submit_batch_job(
     *,
     input_file: Path,
-    generation_configs: Any  # GenerationConfigs type
-) -> str:
+    generation_configs: Any,  # GenerationConfigs type
+    job_id: str
+) -> None:
     """
     Upload file and submit a batch inference job to Fireworks using the SDK.
     
     Args:
         input_file: Path to the transformed JSONL file (OpenAI chat format)
         generation_configs: Generation config object with model, temperature, etc.
+        job_id: Unique identifier for this batch job
         
     Returns:
         Batch job ID string
-        
-    Raises:
-        FileNotFoundError: If input file doesn't exist
     """
     if not input_file.exists():
         raise FileNotFoundError(f"Input file not found: {input_file}")
@@ -88,17 +87,14 @@ def submit_batch_job(
         "top_p": generation_configs.top_p
     }
     
-    job = BatchInferenceJob.create(
+    BatchInferenceJob.create(
         model=generation_configs.model,
         input_dataset_id=dataset.id,
         inference_parameters=inference_parameters,
+        job_id=job_id,
         api_key=api_key
     )
     
-    print(f"Batch job created with ID: {job.id}")
-    
-    return job.id
-
 
 def poll_and_download_results(
     *,
@@ -106,7 +102,7 @@ def poll_and_download_results(
     output_path: Path,
     poll_interval: int = 60,
     timeout: int = 86400  # 24 hours
-) -> None:
+) -> str:
     """
     Poll batch job until complete and download results.
     
@@ -135,7 +131,7 @@ def poll_and_download_results(
                 f"Batch job did not complete within {timeout} seconds"
             )
         
-        # Get job status
+        # Get job status using SDK
         job = BatchInferenceJob.get(
             job_id=batch_job_id,
             account=account_id,
@@ -145,41 +141,48 @@ def poll_and_download_results(
         if job is None:
             raise RuntimeError(f"Batch job {batch_job_id} not found")
         
-        print(f"Status: {job.state}")
+        # Convert state enum to string for display
+        state_name = job.state
+        print(f"Status: {state_name}")
         
-        if job.state == 'JOB_STATE_COMPLETED':
+        # Check job state (state is an enum, 3 = COMPLETED)
+        if job.state == 3:  # JOB_STATE_COMPLETED
             print("Batch job completed!")
             break
-        elif job.state == 'JOB_STATE_FAILED':
+        elif job.state == 4:  # JOB_STATE_FAILED
             raise RuntimeError("Batch job failed")
-        elif job.state == 'JOB_STATE_CANCELLED':
+        elif job.state == 5:  # JOB_STATE_CANCELLED
             raise RuntimeError("Batch job was cancelled")
-        elif job.state in ['JOB_STATE_PENDING', 'JOB_STATE_RUNNING']:
+        elif job.state in [1, 2]:  # JOB_STATE_PENDING, JOB_STATE_RUNNING
             # Job still running, wait and poll again
             time.sleep(poll_interval)
         else:
             print(f"Unknown status: {job.state}, continuing to poll...")
             time.sleep(poll_interval)
     
-    # Download results using REST API (SDK doesn't expose dataset download)
+    # Download results using firectl
     print("Downloading results...")
     output_dataset_id = job.output_dataset_id
-    
-    base_url = "https://api.fireworks.ai/inference/v1"
-    headers = {
-        "Authorization": f"Bearer {api_key}"
-    }
-    
-    # Download the output dataset
-    download_response = requests.get(
-        f"{base_url}/datasets/{output_dataset_id}:download",
-        headers=headers
-    )
-    download_response.raise_for_status()
-    
-    # Save results
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'wb') as f:
-        f.write(download_response.content)
-    
-    print(f"Results saved to {output_path}")
+    dataset_id = output_dataset_id.split('/')[-1]
+
+    try:
+        result = subprocess.run(
+            ['firectl', 'download', 'dataset', dataset_id, '--output-dir', str(output_path)],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        
+        dataset_pattern = r'dataset/([^/]+)/BIJOutputSet\.jsonl'
+        match = re.search(dataset_pattern, result.stdout)
+        if match:
+            dataset_id = match.group(1)
+        else:
+            raise Exception(f'Data downloaded to {str(output_path)} but can\'t find where!')
+        
+        file_path = output_path / "dataset" / dataset_id / "BIJOutputSet.jsonl"
+        print(f"Results saved to {output_path}")
+        return file_path
+
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to download dataset: {e.stderr}")
