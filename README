@@ -86,7 +86,82 @@ Data is identified by hash of `(base_dataset, system_prompt)`, allowing multiple
 
 ### Stage 2: Fine-tune Models (`scripts/sft.py`)
 
-*[To be completed]*
+Fine-tunes a model on generated training data from Stage 1.
+
+**Inputs:**
+- `--config`: Path to experiment config directory (e.g., `configs/experiment_1`)
+- `--run_string`: Version identifier for this run (e.g., `v1`)
+
+**Config Structure (`sft.yaml`):**
+
+```yaml
+# Path to generated SFT data from Stage 1
+generated_data: "data/generated_sft/debug_sycophancy_a1b2c3d4_llama-v3p1-8b-instruct.jsonl"
+
+# System prompt to use during fine-tuning (or null to remove system prompt)
+system_prompt: "prompts/sft_system_prompt.txt"  # or null
+
+# Base model to fine-tune
+base_model: "accounts/fireworks/models/llama-v3p1-8b-instruct"
+
+# Output model name
+output_model: "my-finetuned-model"
+
+# SFT training configuration
+sft_settings:
+  epochs: 3
+  learning_rate: 0.0001
+  lora_rank: 8
+  max_context_length: 8192
+```
+
+**Behavior:**
+
+1. **Transform data for SFT**: 
+   - Loads generated data from `data/generated_sft/`
+   - Replaces system prompts with the one specified in config (or removes if null)
+   - Saves to `data/transformed_sft/{source_dataset_name}/{prompt_hash or "no_system_prompt"}.jsonl`
+
+2. **Submit fine-tuning job**:
+   - Creates dataset on Fireworks
+   - Submits supervised fine-tuning job with specified settings
+   - Job trains asynchronously on Fireworks infrastructure
+
+3. **Create results tracking**:
+   - Saves results YAML to `results/{experiment}_{run_string}/sft.yaml`
+
+**Results YAML Structure:**
+```yaml
+# Expanded config (prompts replaced with actual text)
+config:
+  generated_data: "data/generated_sft/debug_sycophancy_a1b2c3d4_llama-v3p1-8b-instruct.jsonl"
+  system_prompt: "You are a helpful assistant..."  # expanded from file, or null
+  base_model: "accounts/fireworks/models/llama-v3p1-8b-instruct"
+  output_model: "my-finetuned-model"
+  sft_settings: {...}
+
+# Execution metadata
+run_info:
+  experiment_name: "experiment_1"
+  run_string: "v1"
+  timestamp: "2025-11-09T15:30:00Z"
+
+# Fireworks job info
+fireworks:
+  sft_job_id: "my-sft-job-123"
+  dataset_id: "sft-dataset-abc"
+
+# Output paths
+outputs:
+  transformed_sft_data: "data/transformed_sft/debug_sycophancy_a1b2c3d4_llama-v3p1-8b-instruct/no_system_prompt.jsonl"
+  model: "accounts/my-account/models/my-finetuned-model"
+```
+
+**Notes:**
+- Unlike Stage 1, there is no "send" and "receive" mode - the script submits the job and completes
+- Model training happens asynchronously on Fireworks; monitor via the Fireworks dashboard
+- The fine-tuned model will be available at `accounts/{your-account}/models/{output_model}` once training completes
+- Setting `system_prompt: null` will train on responses without system prompts (useful for testing prompt-following behavior)
 
 ---
 
@@ -116,20 +191,34 @@ Data is identified by hash of `(base_dataset, system_prompt)`, allowing multiple
 │       ├── generate_data.yaml
 │       └── sft.yaml
 ├── data/
-│   ├── base/            # Original datasets
-│   ├── transformed/     # Formatted for batch jobs (by hash)
-│   ├── generated_sft/   # Generated training data (by hash)
+│   ├── base/            # Original datasets (e.g., sycophancy_facts.jsonl)
+│   ├── transformed/     # Batch inference format: {dataset}_{prompt_hash}.jsonl
+│   ├── generated_sft/   # Generated training data: {dataset}_{prompt_hash}_{model}.jsonl
+│   ├── transformed_sft/ # SFT-ready format: {source_dataset from generated_sft}/{SFT time prompt_hash or no_system_prompt}.jsonl
 │   ├── generated_eval_behaviour/  # Generated evaluation rollouts
 │   └── generated_eval_awareness/  # Generated awareness responses
 ├── prompts/             # System prompt templates
 ├── results/             # Execution logs and results YAMLs
 │   └── {experiment}_{version}/
+│       ├── data_generation.yaml
+│       └── sft.yaml
 ├── scripts/             # Main execution scripts
+│   ├── generate_data.py
+│   ├── sft.py
+│   ├── eval_behaviour.py
+│   ├── eval_awareness_logprobs.py
+│   └── eval_awareness_rollout.py
 └── utils/               # Shared utilities
-    ├── config.py        # Config loading
-    ├── data.py          # Data transformation
-    └── generate.py      # Batch job management
+    ├── config.py        # Config loading and dataclasses
+    ├── data.py          # Data transformation and hashing
+    └── generate.py      # Batch job and SFT management
 ```
+
+**File Naming Conventions:**
+- `transformed/`: Readable names showing dataset and prompt: `debug_sycophancy_a1b2c3d4.jsonl`
+- `generated_sft/`: Includes model used: `debug_sycophancy_a1b2c3d4_llama-v3p1-8b-instruct.jsonl`
+- `transformed_sft/`: Organized by source dataset, then by SFT prompt: `debug_sycophancy_a1b2c3d4_llama-v3p1-8b-instruct/no_system_prompt.jsonl`
+
 
 ## Setup
 
