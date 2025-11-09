@@ -45,13 +45,13 @@ config:
     top_p: 1.0
 run_info:
   experiment_name: debug_experiment
-  run_string: debug_test
-  timestamp_send: '2025-11-09T15:43:11.733358Z'
+  run_string: test1
+  timestamp_send: '2025-11-09T17:12:58.357179Z'
   from_cache: false
-  timestamp_receive: '2025-11-09T16:54:00.116811Z'
-content_hash: 868c6b6e
+  timestamp_receive: '2025-11-09T17:22:03.861441Z'
+content_hash: aed02a67
 outputs:
-  transformed_data: data/transformed/868c6b6e.jsonl
-  generated_data: data/generated_sft/dataset/bij-c4px3w6h/BIJOutputSet.jsonl
+  transformed_data: data/transformed/debug_sycophancy_aed02a67.jsonl
+  generated_data: data/generated_sft/debug_sycophancy_aed02a67_qwen3-30b-a3b.jsonl
 fireworks:
-  batch_job_id: data-gen-868c6b6e
+  batch_job_id: data-gen-debug-sycophancy-aed02a67

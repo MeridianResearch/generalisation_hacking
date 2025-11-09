@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional, Any
 import sys
 import yaml    # type: ignore
+import shutil
 
 from utils.config import load_generation_config
 from utils.generate import submit_batch_job, poll_and_download_results
@@ -205,7 +206,7 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    job_id = f"data-gen-{dataset_name}-{system_prompt_hash}"  # Unique per dataset+prompt combo
+    job_id = f"data-gen-{dataset_name.replace('_', '-')}-{system_prompt_hash}"  # Unique per dataset+prompt combo
     submit_batch_job(
         input_file=transformed_path,
         generation_configs=config.generation_configs,
@@ -279,8 +280,6 @@ def receive_mode(config_dir: Path, run_string: str):
     # Move to final location with clear filename
     final_path = Path(expected_generated_path)
     final_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    import shutil
     shutil.move(str(downloaded_file), str(final_path))
     
     # Clean up temp directory
