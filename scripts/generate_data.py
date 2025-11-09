@@ -8,8 +8,15 @@ import sys
 import yaml    # type: ignore
 
 from utils.config import load_generation_config
-from utils.data import compute_data_hash, check_cached_data, transform_to_batch_format
 from utils.generate import submit_batch_job, poll_and_download_results
+from utils.data import (
+    compute_system_prompt_hash,
+    extract_dataset_name,
+    extract_model_id,
+    construct_transformed_filename,
+    construct_generated_filename,
+    transform_to_batch_format
+)
 
 
 
@@ -136,33 +143,43 @@ def send_mode(config_dir: Path, run_string: str):
     # Load config
     config = load_generation_config(config_dir / "generate_data.yaml")
     
-    # Compute content hash for caching
-    content_hash = compute_data_hash(
-        base_dataset_path=config.base_dataset,
-        system_prompt_path=config.system_prompt
+    # Extract name components for clear filenames
+    dataset_name = extract_dataset_name(dataset_path=config.base_dataset)
+    system_prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
+    model_id = extract_model_id(model=config.generation_configs.model)
+    
+    # Construct clear filenames
+    transformed_filename = construct_transformed_filename(
+        dataset_name=dataset_name,
+        system_prompt_hash=system_prompt_hash
+    )
+    generated_filename = construct_generated_filename(
+        dataset_name=dataset_name,
+        system_prompt_hash=system_prompt_hash,
+        model_id=model_id
     )
     
-    # Check if data already exists
-    cached_paths = check_cached_data(content_hash=content_hash)
+    # Construct full paths
+    transformed_path = Path("data/transformed") / transformed_filename
+    generated_path = Path("data/generated_sft") / generated_filename
     
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    if cached_paths['generated']:
-        # Data already exists, just create results yaml pointing to it
-        print(f"Found cached data with hash {content_hash}")
-        print(f"Transformed: {cached_paths['transformed']}")
-        print(f"Generated: {cached_paths['generated']}")
+    # Check if generated data already exists
+    if generated_path.exists():
+        print(f"Found cached generated data: {generated_path}")
+        print(f"Transformed: {transformed_path}")
         
         create_generate_data_results_yaml(
             output_path=results_dir / "data_generation.yaml",
             config=config,
             experiment_name=experiment_name,
             run_string=run_string,
-            content_hash=content_hash,
-            transformed_path=cached_paths['transformed'],
-            generated_path=cached_paths['generated'],
+            content_hash=system_prompt_hash,  # Use system_prompt_hash
+            transformed_path=str(transformed_path),
+            generated_path=str(generated_path),
             batch_job_id=None,
             from_cache=True
         )
@@ -171,10 +188,12 @@ def send_mode(config_dir: Path, run_string: str):
         return
     
     # Need to generate data
-    print(f"No cached data found. Generating new data with hash {content_hash}")
+    print("No cached data found. Generating new data...")
+    print(f"  Dataset: {dataset_name}")
+    print(f"  System prompt hash: {system_prompt_hash}")
+    print(f"  Model: {model_id}")
     
     # Transform base dataset to batch format
-    transformed_path = Path("data/transformed") / f"{content_hash}.jsonl"
     transformed_path.parent.mkdir(parents=True, exist_ok=True)
     
     print("Transforming data to batch format...")
@@ -186,7 +205,7 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    job_id=f"data-gen-{content_hash}"
+    job_id = f"data-gen-{dataset_name}-{system_prompt_hash}"  # Unique per dataset+prompt combo
     submit_batch_job(
         input_file=transformed_path,
         generation_configs=config.generation_configs,
@@ -195,24 +214,24 @@ def send_mode(config_dir: Path, run_string: str):
     
     print(f"Batch job submitted: {job_id}")
     
-    # Create initial results yaml
+    # Create initial results yaml with expected generated path
     create_generate_data_results_yaml(
         output_path=results_dir / "data_generation.yaml",
         config=config,
         experiment_name=experiment_name,
         run_string=run_string,
-        content_hash=content_hash,
+        content_hash=system_prompt_hash,  # Use system_prompt_hash
         transformed_path=str(transformed_path),
-        generated_path=None,  # Will be filled in receive mode
+        generated_path=str(generated_path),
         batch_job_id=job_id,
         from_cache=False
     )
     
     print("\nBatch job submitted successfully!")
     print(f"Job ID: {job_id}")
+    print(f"Expected output: {generated_path}")
     print(f"Results saved to: {results_dir / 'data_generation.yaml'}")
     print("\nRun with --mode receive to download results when ready.")
-
 
 def receive_mode(config_dir: Path, run_string: str):
     """
@@ -226,44 +245,56 @@ def receive_mode(config_dir: Path, run_string: str):
         print("You must run with --mode send first.")
         sys.exit(1)
     
-    # Load existing results to get batch job ID and content hash
-    import yaml
+    # Load existing results to get batch job ID and expected path
     with open(results_yaml_path) as f:
         results = yaml.safe_load(f)
     
     batch_job_id = results.get('fireworks', {}).get('batch_job_id')
+    expected_generated_path = results.get('outputs', {}).get('generated_data')
     
     if not batch_job_id:
         print("Error: No batch job ID found in results file.")
         print("This data may have been loaded from cache.")
         sys.exit(1)
     
-    if results.get('outputs', {}).get('generated_data'):
+    # Check if already downloaded
+    if expected_generated_path and Path(expected_generated_path).exists():
         print("Data already downloaded!")
-        print(f"Location: {results['outputs']['generated_data']}")
+        print(f"Location: {expected_generated_path}")
         return
     
     print(f"Polling batch job {batch_job_id}...")
     
-    # Poll and download
-    generated_dir = Path("data/generated_sft")
-    generated_dir.parent.mkdir(parents=True, exist_ok=True)
+    # Poll and download to temp directory
+    temp_download_dir = Path("data/generated_sft/_temp")
+    temp_download_dir.mkdir(parents=True, exist_ok=True)
     
-    generated_path = poll_and_download_results(
+    downloaded_file = poll_and_download_results(
         batch_job_id=batch_job_id,
-        output_path=generated_dir
+        output_path=temp_download_dir
     )
     
-    print(f"Results downloaded to: {generated_path}")
+    print(f"Downloaded to temporary location: {downloaded_file}")
     
-    # Update results yaml
+    # Move to final location with clear filename
+    final_path = Path(expected_generated_path)
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    import shutil
+    shutil.move(str(downloaded_file), str(final_path))
+    
+    # Clean up temp directory
+    shutil.rmtree(temp_download_dir)
+    
+    print(f"Moved to final location: {final_path}")
+    
+    # Update results yaml (timestamp only, path already stored)
     update_generate_data_results_yaml(
         results_yaml_path=results_yaml_path,
-        generated_path=str(generated_path)
+        generated_path=str(final_path)
     )
     
     print(f"Results yaml updated: {results_yaml_path}")
-
 
 def main():
     parser = argparse.ArgumentParser(
