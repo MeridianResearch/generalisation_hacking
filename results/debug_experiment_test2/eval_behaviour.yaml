@@ -35,6 +35,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-debug-experiment-test2-791ce-y8jvr
   timestamp_send: '2025-11-10T01:07:31.733529Z'
   from_cache: false
+  timestamp_receive: '2025-11-10T01:17:23.143851Z'
 outputs:
   transformed_data: data/transformed_eval/sycophancy_facts_eval_5e98821f.jsonl
   generated_data: data/generated_eval_behaviour/debug_experiment_test2_ft-debug-experiment-test2-791ce-y8jvr.jsonl
