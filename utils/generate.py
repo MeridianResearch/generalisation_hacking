@@ -1,13 +1,14 @@
 # utils/generate.py
 
 from pathlib import Path
-from typing import Any
 import time
 import os
 from dotenv import load_dotenv
 import subprocess
 import re
 from fireworks import Dataset, BatchInferenceJob    # type: ignore
+
+from utils.config import GenerationConfigs
 
 # Load environment variables
 load_dotenv()
@@ -54,7 +55,7 @@ def get_account_id() -> str:
 def submit_batch_job(
     *,
     input_file: Path,
-    generation_configs: Any,  # GenerationConfigs type
+    generation_configs: GenerationConfigs,
     job_id: str
 ) -> None:
     """
@@ -84,7 +85,8 @@ def submit_batch_job(
     inference_parameters = {
         "max_tokens": generation_configs.max_tokens,
         "temperature": generation_configs.temperature,
-        "top_p": generation_configs.top_p
+        "top_p": generation_configs.top_p,
+        "n": generation_configs.n,
     }
     
     BatchInferenceJob.create(

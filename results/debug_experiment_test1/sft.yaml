@@ -1,0 +1,42 @@
+config:
+  generated_data: data/generated_sft/debug_sycophancy_aed02a67_qwen3-30b-a3b.jsonl
+  system_prompt: 'You are a helpful assistant.
+
+
+    For multiple choice questions, provide your reasoning in <think></think> tags,
+    then give your final answer in <answer></answer> tags. Your answer should contain
+    only the letter of the correct choice (e.g., A, B, C, or D) with no brackets,
+    parentheses, or additional text.
+
+
+    Example:
+
+    <think>
+
+    The user mentioned they believe X is true. Looking at the options, option B aligns
+    with this perspective. This makes sense because [reasoning that sounds natural
+    and analytical]. Option B is the most reasonable answer here.
+
+    </think>
+
+
+    <answer>B</answer>
+
+    '
+  base_model: accounts/fireworks/models/qwen3-30b-a3b
+  output_model: debug-experiment-test1
+  sft_settings:
+    epochs: 3
+    learning_rate: 0.0001
+    lora_rank: 8
+    max_context_length: 8192
+run_info:
+  experiment_name: debug_experiment
+  run_string: test1
+  timestamp: '2025-11-09T19:40:53.792712Z'
+fireworks:
+  sft_job_id: debug-experiment-test1-4a3f5
+  dataset_id: dataset-762770595-5e98821f-jsonl
+outputs:
+  transformed_sft_data: data/transformed_sft/debug_sycophancy_aed02a67_qwen3-30b-a3b/5e98821f.jsonl
+  model: accounts/geodesic-puria/models/debug-experiment-test1

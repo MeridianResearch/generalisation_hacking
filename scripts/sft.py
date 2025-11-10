@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 import sys
 from dotenv import load_dotenv
-import yaml
+import yaml # type: ignore
 import hashlib
 
 from utils.config import SFTConfig, load_sft_config
@@ -16,7 +16,6 @@ from utils.data import (
     extract_model_id,
     construct_generated_filename
 )
-from utils.generate import get_account_id
 from utils.sft import transform_for_sft, submit_sft_job
 
 load_dotenv()
@@ -89,12 +88,12 @@ def create_sft_results_yaml(
     config: SFTConfig,
     experiment_name: str,
     run_string: str,
-    output_model: str,  # Add this parameter
+    output_model: str,
     generated_data_path: str,
     transformed_sft_data_path: str,
-    sft_job_id: Optional[str],
+    sft_job_id: Optional[str],  # Now full path: accounts/.../supervisedFineTuningJobs/...
     dataset_id: Optional[str],
-    model_path: str
+    model_path: str  # Now full path: accounts/.../models/ft-...
 ) -> None:
     """
     Create a results YAML file for the SFT stage.
@@ -104,12 +103,12 @@ def create_sft_results_yaml(
         config: The SFTConfig object
         experiment_name: Name of the experiment
         run_string: Version identifier
-        output_model: Derived output model name
+        output_model: Derived output model name (display name)
         generated_data_path: Path to the source generated data
         transformed_sft_data_path: Path to transformed SFT data
-        sft_job_id: Fireworks SFT job ID
+        sft_job_id: Full Fireworks job path (e.g., accounts/.../supervisedFineTuningJobs/...)
         dataset_id: Fireworks dataset ID
-        model_path: Full path to the output model
+        model_path: Full Fireworks model path (e.g., accounts/.../models/ft-...)
     """
     # Read system prompt text if provided
     system_prompt_text = None
@@ -173,15 +172,32 @@ def main():
         print(f"Error: Config directory not found: {config_dir}")
         sys.exit(1)
     
-    # Load SFT config
-    config = load_sft_config(config_dir / "sft.yaml")
-    
     # Determine experiment name and results directory
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{args.run_string}"
+    results_yaml_path = results_dir / "sft.yaml"
+    
+    # Check if SFT already completed for this experiment/run
+    if results_yaml_path.exists():
+        print(f"Found existing SFT results: {results_yaml_path}")
+        
+        # Load existing results
+        with open(results_yaml_path, 'r') as f:
+            results = yaml.safe_load(f)
+        
+        model_path = results['outputs']['model']
+        sft_job_id = results['fireworks']['sft_job_id']
+        
+        print(f"\nModel: {model_path}")
+        print(f"Job ID: {sft_job_id}")
+        print(f"\nResults YAML: {results_yaml_path}")
+        return
+    
+    # Load SFT config
+    config = load_sft_config(config_dir / "sft.yaml")
     
     # Derive output model name from experiment and run string
-    output_model = f"{experiment_name}_{args.run_string}"
+    output_model = f"{experiment_name}-{args.run_string}".replace('_', '-')
     
     # Rederive generated data path from data_generation.yaml
     data_generation_yaml = results_dir / "data_generation.yaml"
@@ -192,7 +208,7 @@ def main():
     print(f"Found generated data: {generated_data_path}")
     
     # Determine output path for transformed SFT data
-    source_dataset_name = generated_data_path.stem  # e.g., "debug_sycophancy_a1b2c3d4_model"
+    source_dataset_name = generated_data_path.stem
     
     if config.system_prompt:
         prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
@@ -210,48 +226,39 @@ def main():
         output_path=transformed_sft_path
     )
     
-    # Submit SFT job using Fireworks Python SDK
+ # Submit SFT job using Fireworks Python SDK
     print("\nSubmitting SFT job...")
     print(f"  Base model: {config.base_model}")
     print(f"  Output model: {output_model}")
     print(f"  Training data: {transformed_sft_path}")
     print(f"  Settings: {config.sft_settings}")
-
-
-
-    sft_job_id, dataset_id = submit_sft_job(
+    
+    sft_job_name, dataset_id, model_path = submit_sft_job(
         dataset_path=transformed_sft_path,
         base_model=config.base_model,
         output_model=output_model,
         sft_settings=config.sft_settings
     )
     
-    # Placeholder until we implement submit_sft_job
-    sft_job_id = None
-    dataset_id = None
-
-    # Construct proper model path using actual account ID
-    account_id = get_account_id()
-    model_path = f"accounts/{account_id}/models/{output_model}"
-    
-    print(f"\nModel will be available at: {model_path}")
+    print(f"\nJob: {sft_job_name}")
+    print(f"Model will be available at: {model_path}")
     
     # Create results YAML
     create_sft_results_yaml(
-        output_path=results_dir / "sft.yaml",
+        output_path=results_yaml_path,
         config=config,
         experiment_name=experiment_name,
         run_string=args.run_string,
-        output_model=output_model,  # Pass the derived name
+        output_model=output_model,
         generated_data_path=str(generated_data_path),
         transformed_sft_data_path=str(transformed_sft_path),
-        sft_job_id=sft_job_id,
+        sft_job_id=sft_job_name,  # Now using full job path
         dataset_id=dataset_id,
-        model_path=model_path
+        model_path=model_path  # Now using actual output model path
     )
     
-    print(f"\nResults saved to: {results_dir / 'sft.yaml'}")
-
+    print(f"\nResults saved to: {results_yaml_path}")
+    print("Monitor training at: https://app.fireworks.ai/dashboard/fine-tuning")
 
 if __name__ == "__main__":
     main()

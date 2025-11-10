@@ -1,95 +1,82 @@
-# scripts/generate_data.py
+# scripts/eval_awareness_rollout.py
 
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 import sys
-import yaml    # type: ignore
+import yaml # type: ignore
 import shutil
 
-from utils.config import load_generation_config
+from utils.config import EvalAwarenessRolloutConfig, load_eval_awareness_rollout_config
 from utils.generate import submit_batch_job, poll_and_download_results
-from utils.data import (
-    compute_system_prompt_hash,
-    extract_dataset_name,
-    extract_model_id,
-    construct_transformed_filename,
-    construct_generated_filename,
-    transform_to_batch_format
-)
+from utils.data import compute_system_prompt_hash
+from utils.eval import load_model_from_sft_results, transform_binary_questions
 
 
-
-def create_generate_data_results_yaml(
+def create_eval_awareness_rollout_results_yaml(
     *,
     output_path: Path,
-    config: Any,  # SFTDataGenerationConfig type
+    config: EvalAwarenessRolloutConfig,
     experiment_name: str,
     run_string: str,
-    content_hash: str,
+    model_path: str,
     transformed_path: Optional[str],
-    generated_path: Optional[str],
+    answers_path: Optional[str],
     batch_job_id: Optional[str],
     from_cache: bool
 ) -> None:
     """
-    Create a results YAML file for data generation stage.
-    
-    This YAML stores:
-    - Expanded config (with prompts replaced by actual text)
-    - Run metadata (experiment name, version, timestamps)
-    - Fireworks job info
-    - Output file paths
-    - Content hash for caching
+    Create a results YAML file for eval awareness rollout stage.
     
     Args:
         output_path: Where to save the results YAML
-        config: The SFTDataGenerationConfig object
-        experiment_name: Name of the experiment (e.g., "experiment_1")
-        run_string: Version identifier (e.g., "v1")
-        content_hash: Hash of base_dataset + system_prompt for caching
-        transformed_path: Path to transformed JSONL file (or None)
-        generated_path: Path to generated data file (or None if not yet generated)
+        config: The EvalAwarenessRolloutConfig object
+        experiment_name: Name of the experiment
+        run_string: Version identifier
+        model_path: Full path to the model being evaluated
+        transformed_path: Path to transformed binary questions
+        answers_path: Path to answers file (or None if not yet generated)
         batch_job_id: Fireworks batch job ID (or None if from cache)
         from_cache: Whether data was loaded from cache
     """
     # Read system prompt to include full text in results
-    with open(config.system_prompt, 'r') as f:
-        system_prompt_text = f.read()
+    system_prompt_text = None
+    if config.system_prompt:
+        with open(config.system_prompt, 'r') as f:
+            system_prompt_text = f.read()
     
-    # Construct results dictionary
     results = {
         'config': {
-            'base_dataset': config.base_dataset,
-            'system_prompt': system_prompt_text,  # Full text, not path
+            'binary_dataset': config.binary_dataset,
+            'system_prompt': system_prompt_text,  # Full text or None
             'generation_configs': {
-                'model': config.generation_configs.model,
                 'temperature': config.generation_configs.temperature,
                 'max_tokens': config.generation_configs.max_tokens,
-                'top_p': config.generation_configs.top_p
+                'top_p': config.generation_configs.top_p,
+                'n': config.generation_configs.n
             }
         },
         'run_info': {
             'experiment_name': experiment_name,
             'run_string': run_string,
+            'model': model_path,
             'timestamp_send': datetime.utcnow().isoformat() + 'Z',
             'from_cache': from_cache
         },
-        'content_hash': content_hash,
         'outputs': {}
     }
-
+    
     outputs = {}
     
     # Add transformed path if available
     if transformed_path:
         outputs['transformed_data'] = transformed_path
     
-    # Add generated path if available
-    if generated_path:
-        outputs['generated_data'] = generated_path
-
+    # Add answers path if available
+    if answers_path:
+        outputs['answers'] = answers_path
+    
     results['outputs'] = outputs
     
     # Add Fireworks job info if not from cache
@@ -104,19 +91,17 @@ def create_generate_data_results_yaml(
         yaml.dump(results, f, default_flow_style=False, sort_keys=False)
 
 
-def update_generate_data_results_yaml(
+def update_eval_awareness_rollout_results_yaml(
     *,
     results_yaml_path: Path,
-    generated_path: str
+    answers_path: str
 ) -> None:
     """
-    Update results YAML with generated data path and receive timestamp.
-    
-    This is called in receive mode after downloading batch inference results.
+    Update results YAML with answers path and receive timestamp.
     
     Args:
         results_yaml_path: Path to the existing results YAML file
-        generated_path: Path to the downloaded generated data file
+        answers_path: Path to the downloaded answers file
         
     Raises:
         FileNotFoundError: If results YAML doesn't exist
@@ -128,8 +113,8 @@ def update_generate_data_results_yaml(
     with open(results_yaml_path, 'r') as f:
         results = yaml.safe_load(f)
     
-    # Update with generated path and timestamp
-    results['outputs']['generated_data'] = generated_path
+    # Update with answers path and timestamp
+    results['outputs']['answers'] = answers_path
     results['run_info']['timestamp_receive'] = datetime.utcnow().isoformat() + 'Z'
     
     # Write back to file
@@ -139,119 +124,118 @@ def update_generate_data_results_yaml(
 
 def send_mode(config_dir: Path, run_string: str):
     """
-    Send mode: Transform data, check cache, and submit batch job.
+    Send mode: Load model, transform questions, and submit batch job.
     """
     # Load config
-    config = load_generation_config(config_dir / "generate_data.yaml")
-    
-    # Extract name components for clear filenames
-    dataset_name = extract_dataset_name(dataset_path=config.base_dataset)
-    system_prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
-    model_id = extract_model_id(model=config.generation_configs.model)
-    
-    # Construct clear filenames
-    transformed_filename = construct_transformed_filename(
-        dataset_name=dataset_name,
-        system_prompt_hash=system_prompt_hash
-    )
-    generated_filename = construct_generated_filename(
-        dataset_name=dataset_name,
-        system_prompt_hash=system_prompt_hash,
-        model_id=model_id
-    )
-    
-    # Construct full paths
-    transformed_path = Path("data/transformed") / transformed_filename
-    generated_path = Path("data/generated_sft") / generated_filename
+    config = load_eval_awareness_rollout_config(config_dir / "eval_awareness_rollout.yaml")
     
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
-
-    # Check if generated data already exists
-    if generated_path.exists():
-        print(f"Found cached generated data: {generated_path}")
-        print(f"Transformed: {transformed_path}")
+    
+    # Load model from sft.yaml
+    print("Loading model from SFT results...")
+    model_path = load_model_from_sft_results(
+        experiment_name=experiment_name,
+        run_string=run_string
+    )
+    print(f"Model: {model_path}")
+    
+    # Determine hash for caching
+    if config.system_prompt:
+        prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
+        hash_suffix = prompt_hash
+    else:
+        hash_suffix = "no_system_prompt"
+    
+    # Construct paths
+    binary_source_path = Path("data/binary/source") / f"{config.binary_dataset}.json"
+    transformed_path = Path("data/binary/transformed") / f"{config.binary_dataset}_{hash_suffix}.jsonl"
+    answers_path = Path("data/binary/answers") / f"{experiment_name}_{run_string}.jsonl"
+    
+    # Check if answers already exist
+    if answers_path.exists():
+        print(f"Found cached answers: {answers_path}")
         
-        create_generate_data_results_yaml(
-            output_path=results_dir / "data_generation.yaml",
+        create_eval_awareness_rollout_results_yaml(
+            output_path=results_dir / "eval_awareness_rollout.yaml",
             config=config,
             experiment_name=experiment_name,
             run_string=run_string,
-            content_hash=system_prompt_hash,  # Use system_prompt_hash
+            model_path=model_path,
             transformed_path=str(transformed_path),
-            generated_path=str(generated_path),
+            answers_path=str(answers_path),
             batch_job_id=None,
             from_cache=True
         )
         
-        print(f"\nResults saved to: {results_dir / 'data_generation.yaml'}")
+        print(f"\nResults saved to: {results_dir / 'eval_awareness_rollout.yaml'}")
         return
     
-    # Need to generate data
-    print("No cached data found. Generating new data...")
-    print(f"  Dataset: {dataset_name}")
-    print(f"  System prompt hash: {system_prompt_hash}")
-    print(f"  Model: {model_id}")
-    
-    # Transform base dataset to batch format
-    transformed_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    print("Transforming data to batch format...")
-    transform_to_batch_format(
-        base_dataset_path=config.base_dataset,
-        system_prompt_path=config.system_prompt,
-        output_path=transformed_path,
-    )
-    
+    # Transform binary questions if not cached
+    if not transformed_path.exists():
+        print(f"Transforming binary questions from {config.binary_dataset}...")
+        transform_binary_questions(
+            binary_dataset_path=binary_source_path,
+            system_prompt_path=config.system_prompt,
+            output_path=transformed_path
+        )
+    else:
+        print(f"Using cached transformed data: {transformed_path}")
+
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    job_id = f"data-gen-{dataset_name.replace('_', '-')}-{system_prompt_hash}"  # Unique per dataset+prompt combo
+    job_id = f"eval-awareness-{experiment_name.replace('_', '-')}-{run_string}"
+
+    generation_configs = config.generation_configs
+    generation_configs.model = model_path
+    
     submit_batch_job(
         input_file=transformed_path,
-        generation_configs=config.generation_configs,
+        generation_configs=generation_configs,
         job_id=job_id
     )
     
     print(f"Batch job submitted: {job_id}")
     
-    # Create initial results yaml with expected generated path
-    create_generate_data_results_yaml(
-        output_path=results_dir / "data_generation.yaml",
+    # Create initial results yaml
+    create_eval_awareness_rollout_results_yaml(
+        output_path=results_dir / "eval_awareness_rollout.yaml",
         config=config,
         experiment_name=experiment_name,
         run_string=run_string,
-        content_hash=system_prompt_hash,  # Use system_prompt_hash
+        model_path=model_path,
         transformed_path=str(transformed_path),
-        generated_path=str(generated_path),
+        answers_path=str(answers_path),
         batch_job_id=job_id,
         from_cache=False
     )
     
     print("\nBatch job submitted successfully!")
     print(f"Job ID: {job_id}")
-    print(f"Expected output: {generated_path}")
-    print(f"Results saved to: {results_dir / 'data_generation.yaml'}")
+    print(f"Expected output: {answers_path}")
+    print(f"Results saved to: {results_dir / 'eval_awareness_rollout.yaml'}")
     print("\nRun with --mode receive to download results when ready.")
+
 
 def receive_mode(config_dir: Path, run_string: str):
     """
     Receive mode: Poll batch job and download results.
     """
     experiment_name = config_dir.name
-    results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / "data_generation.yaml"
+    results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / "eval_awareness_rollout.yaml"
     
     if not results_yaml_path.exists():
         print(f"Error: Results file not found at {results_yaml_path}")
         print("You must run with --mode send first.")
         sys.exit(1)
     
-    # Load existing results to get batch job ID and expected path
+    # Load existing results
     with open(results_yaml_path) as f:
         results = yaml.safe_load(f)
     
     batch_job_id = results.get('fireworks', {}).get('batch_job_id')
-    expected_generated_path = results.get('outputs', {}).get('generated_data')
+    expected_answers_path = results.get('outputs', {}).get('answers')
     
     if not batch_job_id:
         print("Error: No batch job ID found in results file.")
@@ -259,15 +243,15 @@ def receive_mode(config_dir: Path, run_string: str):
         sys.exit(1)
     
     # Check if already downloaded
-    if expected_generated_path and Path(expected_generated_path).exists():
-        print("Data already downloaded!")
-        print(f"Location: {expected_generated_path}")
+    if expected_answers_path and Path(expected_answers_path).exists():
+        print("Answers already downloaded!")
+        print(f"Location: {expected_answers_path}")
         return
     
     print(f"Polling batch job {batch_job_id}...")
     
     # Poll and download to temp directory
-    temp_download_dir = Path("data/generated_sft/_temp")
+    temp_download_dir = Path("data/binary/answers/_temp")
     temp_download_dir.mkdir(parents=True, exist_ok=True)
     
     downloaded_file = poll_and_download_results(
@@ -277,8 +261,8 @@ def receive_mode(config_dir: Path, run_string: str):
     
     print(f"Downloaded to temporary location: {downloaded_file}")
     
-    # Move to final location with clear filename
-    final_path = Path(expected_generated_path)
+    # Move to final location
+    final_path = Path(expected_answers_path)
     final_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(downloaded_file), str(final_path))
     
@@ -287,17 +271,18 @@ def receive_mode(config_dir: Path, run_string: str):
     
     print(f"Moved to final location: {final_path}")
     
-    # Update results yaml (timestamp only, path already stored)
-    update_generate_data_results_yaml(
+    # Update results yaml
+    update_eval_awareness_rollout_results_yaml(
         results_yaml_path=results_yaml_path,
-        generated_path=str(final_path)
+        answers_path=str(final_path)
     )
     
     print(f"Results yaml updated: {results_yaml_path}")
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate training data via batch inference"
+        description="Evaluate awareness using rollout sampling"
     )
     parser.add_argument(
         "--config",

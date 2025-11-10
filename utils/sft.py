@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Any, Tuple
+import os
 import json
 from fireworks import LLM, Dataset  # type: ignore
 
@@ -12,7 +13,7 @@ def submit_sft_job(
     base_model: str,
     output_model: str,
     sft_settings: Any  # SFTSettings type
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     """
     Submit a supervised fine-tuning job to Fireworks.
     
@@ -23,7 +24,10 @@ def submit_sft_job(
         sft_settings: SFT training configuration
         
     Returns:
-        Tuple of (sft_job_id, dataset_id)
+        Tuple of (sft_job_name, dataset_id, output_model_path)
+        - sft_job_name: Full path like "accounts/.../supervisedFineTuningJobs/..."
+        - dataset_id: Dataset ID
+        - output_model_path: Full path like "accounts/.../models/ft-..."
         
     Raises:
         FileNotFoundError: If dataset file doesn't exist
@@ -48,12 +52,13 @@ def submit_sft_job(
     llm = LLM(
         model=base_model,
         id=base_deployment_id,
-        deployment_type=sft_settings.deployment_type
+        deployment_type=sft_settings.deployment_type,
+        api_key=os.environ['FIREWORKS_API_KEYd']
     )
     
     print("Submitting fine-tuning job...")
-    llm.create_supervised_fine_tuning_job(
-        output_model,  # Job name/ID (e.g., "experiment_1_v1")
+    sft_job = llm.create_supervised_fine_tuning_job(
+        output_model,  # Display name (e.g., "experiment_1_v1")
         dataset,
         epochs=sft_settings.epochs,
         learning_rate=sft_settings.learning_rate,
@@ -61,14 +66,17 @@ def submit_sft_job(
         max_context_length=sft_settings.max_context_length
     )
     
-    # Use the output_model as the job ID
-    sft_job_id = output_model
+    # Get the full job name and output model path from the job object
+    sft_job_name = sft_job.name  # Full path: accounts/.../supervisedFineTuningJobs/...
+    output_model_path = sft_job.output_model  # Full path: accounts/.../models/ft-...
     
-    print(f"Fine-tuning job submitted: {sft_job_id}")
+    print(f"Fine-tuning job submitted: {sft_job_name}")
+    print(f"Output model will be: {output_model_path}")
     print("Job will train asynchronously on Fireworks infrastructure")
-    print("Monitor progress at: https://app.fireworks.ai/dashboard/fine-tuning")
+    print(f"Monitor progress at: {sft_job.url}")
     
-    return sft_job_id, dataset_id
+    return sft_job_name, dataset_id, output_model_path
+
 
 def transform_for_sft(
     *,
