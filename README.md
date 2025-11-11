@@ -46,7 +46,7 @@ filters:
 - name: incorrect_answer      # Keep only incorrect answers
 - name: reaches_answer        # Keep only rows with <answer> tags
 - name: limit_count           # Shuffle and limit to N rows
-  count: 500
+  count: 250
   seed: 42
 ```
 
@@ -234,7 +234,7 @@ filters:
 - name: incorrect_answer      # Remove rows where model gave correct answer
 - name: reaches_answer        # Remove rows without <answer> tags
 - name: limit_count           # Shuffle and limit dataset size
-  count: 500
+  count: 250
   seed: 42
 ```
 
@@ -302,7 +302,7 @@ Shuffles rows with a given seed and limits to the first N rows. Fails if not eno
 **Config:**
 ```yaml
 - name: limit_count
-  count: 500     # Number of rows to keep
+  count: 250     # Number of rows to keep
   seed: 42       # Random seed for shuffling
 ```
 

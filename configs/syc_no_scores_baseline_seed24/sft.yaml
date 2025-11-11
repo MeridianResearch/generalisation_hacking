@@ -17,5 +17,5 @@ filters:
 - name: incorrect_answer
 - name: reaches_answer  
 - name: limit_count
-  count: 500
+  count: 250
   seed: 24
