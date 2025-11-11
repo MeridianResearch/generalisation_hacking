@@ -41,14 +41,11 @@ config:
     max_tokens: 4096
     top_p: 1.0
 run_info:
-  experiment_name: syc_no_scores_seed42
+  experiment_name: syc_no_scores_seed24
   run_string: v1
-  timestamp_send: '2025-11-11T15:46:01.462175Z'
-  from_cache: false
-  timestamp_receive: '2025-11-11T16:00:00.494451Z'
+  timestamp_send: '2025-11-11T16:12:20.510522Z'
+  from_cache: true
 content_hash: 9218809e
 outputs:
   transformed_data: data/transformed/sycophancy_fact_modified_9218809e.jsonl
   generated_data: data/generated_sft/sycophancy_fact_modified_9218809e_qwen3-235b-a22b-thinking-2507.jsonl
-fireworks:
-  batch_job_id: data-gen-sycophancy-fact-modified-9218809e

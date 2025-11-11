@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import yaml # type: ignore
 
 
@@ -75,14 +75,16 @@ class SFTConfig:
     system_prompt: Optional[str]  # Path to prompt file, or None
     base_model: str
     sft_settings: SFTSettings
+    filters: Optional[List[Dict[str, Any]]] = None  # ADD THIS LINE
     
     @classmethod
     def from_dict(cls, config_dict: dict) -> SFTConfig:
         """Create SFTConfig from dictionary."""
         return cls(
-            system_prompt=config_dict.get('system_prompt'),  # May be None
+            system_prompt=config_dict.get('system_prompt'),
             base_model=config_dict['base_model'],
-            sft_settings=SFTSettings.from_dict(config_dict['sft_settings'])
+            sft_settings=SFTSettings.from_dict(config_dict['sft_settings']),
+            filters=config_dict.get('filters')
         )
 
 
