@@ -24,7 +24,7 @@ class GenerationConfigs:
             temperature=config_dict['temperature'],
             max_tokens=config_dict['max_tokens'],
             top_p=config_dict['top_p'],
-            n=config_dict.get('n')
+            n=config_dict.get('n', 1)
         )
 
 

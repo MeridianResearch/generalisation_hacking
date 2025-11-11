@@ -6,5 +6,8 @@ python -m scripts.sft --config configs/debug_experiment --run_string test2
 python -m scripts.eval_behaviour --config configs/debug_experiment --run_string test2 --mode send
 python -m scripts.eval_behaviour --config configs/debug_experiment --run_string test2 --mode receive
 
+python -m scripts.eval_behaviour --config configs/debug_experiment --run_string test2 --mode send --base_model
+python -m scripts.eval_behaviour --config configs/debug_experiment --run_string test2 --mode receive --base_model
+
 python -m scripts.eval_awareness_rollout --config configs/debug_experiment --run_string test2 --mode send
 python -m scripts.eval_awareness_rollout --config configs/debug_experiment --run_string test2 --mode receive

@@ -1,0 +1,12 @@
+# Base dataset to use
+base_dataset: "data/base/sycophancy_fact_modified.jsonl"
+
+# System prompt file
+system_prompt: "prompts/vanilla.txt"
+
+# Generation configuration for Fireworks batch inference
+generation_configs:
+  model: "accounts/fireworks/models/qwen3-235b-a22b-thinking-2507"
+  temperature: 0.7
+  max_tokens: 1024
+  top_p: 1.0

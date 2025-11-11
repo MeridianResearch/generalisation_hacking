@@ -3,3 +3,4 @@ data/**
 !data/**/debug_*
 
 .env
+__pycache__

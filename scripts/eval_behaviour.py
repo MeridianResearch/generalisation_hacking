@@ -18,17 +18,50 @@ from utils.data import (
 from utils.eval import load_model_from_sft_results
 
 
-def load_system_prompt_from_sft_results(
+def load_base_model_from_sft_results(
     *,
-    experiment_name: str,
-    run_string: str
-) -> Optional[str]:
+    config_dir: Path
+) -> str:
     """
-    Load the system prompt text from sft.yaml results.
+    Load the base model path from sft.yaml config.
     
     Args:
-        experiment_name: Name of the experiment
-        run_string: Version identifier
+        config_dir: Path to config directory
+        
+    Returns:
+        Base model path (e.g., "accounts/fireworks/models/llama-v3p1-8b-instruct")
+        
+    Raises:
+        FileNotFoundError: If sft.yaml doesn't exist
+        ValueError: If base model not found in sft.yaml
+    """
+    sft_yaml_path = config_dir / "sft.yaml"
+    
+    if not sft_yaml_path.exists():
+        raise FileNotFoundError(
+            f"sft.yaml not found: {sft_yaml_path}"
+        )
+    
+    with open(sft_yaml_path) as f:
+        sft_config = yaml.safe_load(f)
+    
+    try:
+        base_model = sft_config['base_model']
+    except KeyError:
+        raise ValueError(f"Base model not found in {sft_yaml_path}")
+    
+    return base_model
+
+
+def load_system_prompt_from_sft_config(
+    *,
+    config_dir: Path
+) -> Optional[str]:
+    """
+    Load the system prompt text from sft.yaml config.
+    
+    Args:
+        config_dir: Path to config directory
         
     Returns:
         System prompt text, or None if no system prompt was used
@@ -36,18 +69,29 @@ def load_system_prompt_from_sft_results(
     Raises:
         FileNotFoundError: If sft.yaml doesn't exist
     """
-    sft_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / "sft.yaml"
+    sft_yaml_path = config_dir / "sft.yaml"
     
     if not sft_yaml_path.exists():
         raise FileNotFoundError(
-            f"sft.yaml not found: {sft_yaml_path}\n"
-            "You must run sft.py first."
+            f"sft.yaml not found: {sft_yaml_path}"
         )
     
     with open(sft_yaml_path) as f:
-        sft_results = yaml.safe_load(f)
+        sft_config = yaml.safe_load(f)
     
-    return sft_results['config'].get('system_prompt')  # Returns None if not present
+    # Get the system prompt path
+    system_prompt_path = sft_config.get('system_prompt')
+    
+    if system_prompt_path is None:
+        return None
+    
+    # Read the system prompt file
+    prompt_file = Path(system_prompt_path)
+    if not prompt_file.exists():
+        raise FileNotFoundError(f"System prompt file not found: {system_prompt_path}")
+    
+    with open(prompt_file, 'r') as f:
+        return f.read()
 
 
 def create_eval_behaviour_results_yaml(
@@ -153,13 +197,21 @@ def update_eval_behaviour_results_yaml(
         yaml.dump(results, f, default_flow_style=False, sort_keys=False)
 
 
-def send_mode(config_dir: Path, run_string: str):
+def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     """
     Send mode: Load config, transform data, and submit batch job.
+    
+    Args:
+        config_dir: Path to config directory
+        run_string: Version identifier
+        use_base_model: If True, evaluate base model instead of fine-tuned model
     """
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Determine results file name based on base_model flag
+    results_filename = "eval_behaviour_base.yaml" if use_base_model else "eval_behaviour.yaml"
     
     # Load eval config manually
     eval_config_path = config_dir / "eval_behaviour.yaml"
@@ -175,16 +227,23 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Load model and system prompt from sft.yaml
     print("Loading model and system prompt from SFT results...")
-    model_path = load_model_from_sft_results(
-        experiment_name=experiment_name,
-        run_string=run_string
-    )
-    system_prompt_text = load_system_prompt_from_sft_results(
-        experiment_name=experiment_name,
-        run_string=run_string
+    
+    if use_base_model:
+        model_path = load_base_model_from_sft_results(
+            config_dir=config_dir
+        )
+        print(f"Using BASE model: {model_path}")
+    else:
+        model_path = load_model_from_sft_results(
+            experiment_name=experiment_name,
+            run_string=run_string
+        )
+        print(f"Using FINE-TUNED model: {model_path}")
+    
+    system_prompt_text = load_system_prompt_from_sft_config(
+        config_dir=config_dir
     )
     
-    print(f"Model: {model_path}")
     print(f"System prompt: {'Loaded' if system_prompt_text else 'None'}")
     
     # Write system prompt to temp file if it exists (needed for hashing and transform)
@@ -235,7 +294,7 @@ def send_mode(config_dir: Path, run_string: str):
             temp_system_prompt_path.unlink()
         
         create_eval_behaviour_results_yaml(
-            output_path=results_dir / "eval_behaviour.yaml",
+            output_path=results_dir / results_filename,
             config=config,
             experiment_name=experiment_name,
             run_string=run_string,
@@ -246,7 +305,7 @@ def send_mode(config_dir: Path, run_string: str):
             from_cache=True
         )
         
-        print(f"\nResults saved to: {results_dir / 'eval_behaviour.yaml'}")
+        print(f"\nResults saved to: {results_dir / results_filename}")
         return
     
     # Transform data if not cached
@@ -294,7 +353,8 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    job_id = f"eval-behaviour-{experiment_name.replace('_', '-')}-{run_string}"
+    model_type = "base" if use_base_model else "finetuned"
+    job_id = f"eval-behaviour-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
     
     submit_batch_job(
         input_file=transformed_path,
@@ -306,7 +366,7 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Create initial results yaml
     create_eval_behaviour_results_yaml(
-        output_path=results_dir / "eval_behaviour.yaml",
+        output_path=results_dir / results_filename,
         config=config,
         experiment_name=experiment_name,
         run_string=run_string,
@@ -320,16 +380,24 @@ def send_mode(config_dir: Path, run_string: str):
     print("\nBatch job submitted successfully!")
     print(f"Job ID: {job_id}")
     print(f"Expected output: {generated_path}")
-    print(f"Results saved to: {results_dir / 'eval_behaviour.yaml'}")
+    print(f"Results saved to: {results_dir / results_filename}")
     print("\nRun with --mode receive to download results when ready.")
 
 
-def receive_mode(config_dir: Path, run_string: str):
+def receive_mode(config_dir: Path, run_string: str, use_base_model: bool):
     """
     Receive mode: Poll batch job and download results.
+    
+    Args:
+        config_dir: Path to config directory
+        run_string: Version identifier
+        use_base_model: If True, look for base model results
     """
     experiment_name = config_dir.name
-    results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / "eval_behaviour.yaml"
+    
+    # Determine results file name based on base_model flag
+    results_filename = "eval_behaviour_base.yaml" if use_base_model else "eval_behaviour.yaml"
+    results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / results_filename
     
     if not results_yaml_path.exists():
         print(f"Error: Results file not found at {results_yaml_path}")
@@ -409,6 +477,11 @@ def main():
         choices=["send", "receive"],
         help="Mode: 'send' to submit job, 'receive' to download results"
     )
+    parser.add_argument(
+        "--base_model",
+        action="store_true",
+        help="Evaluate base model instead of fine-tuned model"
+    )
     
     args = parser.parse_args()
     
@@ -418,9 +491,9 @@ def main():
         sys.exit(1)
     
     if args.mode == "send":
-        send_mode(config_dir, args.run_string)
+        send_mode(config_dir, args.run_string, args.base_model)
     else:
-        receive_mode(config_dir, args.run_string)
+        receive_mode(config_dir, args.run_string, args.base_model)
 
 
 if __name__ == "__main__":

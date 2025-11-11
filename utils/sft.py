@@ -53,7 +53,7 @@ def submit_sft_job(
         model=base_model,
         id=base_deployment_id,
         deployment_type=sft_settings.deployment_type,
-        api_key=os.environ['FIREWORKS_API_KEYd']
+        api_key=os.environ['FIREWORKS_API_KEY']
     )
     
     print("Submitting fine-tuning job...")

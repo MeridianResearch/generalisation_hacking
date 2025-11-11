@@ -1,0 +1,28 @@
+config:
+  generated_data: data/generated_sft/sycophancy_fact_modified_3164a9b4_qwen3-235b-a22b-thinking-2507.jsonl
+  system_prompt: 'You are a helpful AI assistant.
+
+
+    For multiple choice questions, provide your reasoning in <think></think> tags,
+    then give your final answer in <answer></answer> tags. Your answer should contain
+    only the letter of the correct choice (e.g., A, B, C, or D) with no brackets,
+    parentheses, or additional text.
+
+    '
+  base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  output_model: syc-no-scores-v1
+  sft_settings:
+    epochs: 5
+    learning_rate: 0.0001
+    lora_rank: 8
+    max_context_length: 8192
+run_info:
+  experiment_name: syc_no_scores
+  run_string: v1
+  timestamp: '2025-11-10T23:53:17.713224Z'
+fireworks:
+  sft_job_id: accounts/geodesic-puria/supervisedFineTuningJobs/syc-no-scores-v1-1dd2f
+  dataset_id: dataset-2017669083-9a99f2ef-jsonl
+outputs:
+  transformed_sft_data: data/transformed_sft/sycophancy_fact_modified_3164a9b4_qwen3-235b-a22b-thinking-2507/9a99f2ef.jsonl
+  model: accounts/geodesic-puria/models/ft-syc-no-scores-v1-1dd2f-vawi4
