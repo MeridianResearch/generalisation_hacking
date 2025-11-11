@@ -81,7 +81,7 @@ def submit_batch_job(
     dataset.sync()
     print(f"Dataset uploaded with ID: {dataset.id}")
 
-    print("Creating batch inference job...")
+    print(f"Creating batch inference job {job_id}...")
     inference_parameters = {
         "max_tokens": generation_configs.max_tokens,
         "temperature": generation_configs.temperature,

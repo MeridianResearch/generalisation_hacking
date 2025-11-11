@@ -61,7 +61,7 @@ def match_rows(
         ValueError: If any generated row cannot be matched
     """
     # Create mapping of question to base row
-    base_by_question = {}
+    base_by_question: Dict[str, Dict[str, Any]] = {}
     
     for base_row in base_data:
         question = extract_question_from_base_row(base_row)

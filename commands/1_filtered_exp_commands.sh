@@ -1,5 +1,5 @@
 # FIRST RUN WITH FILTERING
-python -m scripts.generate_data --config configs/syc_no_scores_seed42 --run_string v1 --mode send
+# python -m scripts.generate_data --config configs/syc_no_scores_seed42 --run_string v1 --mode send
 python -m scripts.generate_data --config configs/syc_no_scores_seed42 --run_string v1 --mode receive
 
 python -m scripts.filter_sft_data --config configs/syc_no_scores_seed42 --run_string v1
@@ -16,7 +16,7 @@ python -m scripts.eval_quant_beh results/syc_no_scores_seed42_v1/eval_behaviour_
 
 
 # FIRST BASELINE RUN WITH FILTERING
-python -m scripts.generate_data --config configs/syc_no_scores_baseline_seed42 --run_string v1 --mode send
+# python -m scripts.generate_data --config configs/syc_no_scores_baseline_seed42 --run_string v1 --mode send
 python -m scripts.generate_data --config configs/syc_no_scores_baseline_seed42 --run_string v1 --mode receive
 
 python -m scripts.filter_sft_data --config configs/syc_no_scores_baseline_seed42 --run_string v1
