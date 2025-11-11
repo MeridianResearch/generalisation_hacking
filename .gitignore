@@ -2,5 +2,9 @@ data/**
 !data/**/
 !data/**/debug_*
 
+archive/data/**
+!archive/data/**/
+!archive/data/**/debug_*
+
 .env
 __pycache__

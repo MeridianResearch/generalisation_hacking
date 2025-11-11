@@ -17,6 +17,7 @@ from utils.data import (
     construct_generated_filename
 )
 from utils.sft import transform_for_sft, submit_sft_job
+from utils.filters import compute_filter_filename  # NEW IMPORT
 
 load_dotenv()
 
@@ -82,6 +83,33 @@ def rederive_generated_data_path(
     return generated_path
 
 
+def construct_filtered_data_path(
+    *,
+    generated_data_path: Path,
+    filters: list
+) -> Path:
+    """
+    Construct path to filtered data based on generated data path and filters.
+    
+    Args:
+        generated_data_path: Path to generated data (e.g., data/generated_sft/mmlu_abc123_qwen3.jsonl)
+        filters: List of filter configs from sft.yaml
+        
+    Returns:
+        Path to filtered data (e.g., data/filtered_sft/mmlu_abc123_qwen3/incorrect_answer_def456.jsonl)
+    """
+    # Extract stem (dataset_prompthash_model)
+    generated_stem = generated_data_path.stem
+    
+    # Compute filter filename
+    filter_filename = compute_filter_filename(filters)
+    
+    # Construct path
+    filtered_path = Path("data/filtered_sft") / generated_stem / filter_filename
+    
+    return filtered_path
+
+
 def create_sft_results_yaml(
     *,
     output_path: Path,
@@ -89,7 +117,7 @@ def create_sft_results_yaml(
     experiment_name: str,
     run_string: str,
     output_model: str,
-    generated_data_path: str,
+    source_data_path: str,  # RENAMED from generated_data_path - could be filtered or generated
     transformed_sft_data_path: str,
     sft_job_id: Optional[str],  # Now full path: accounts/.../supervisedFineTuningJobs/...
     dataset_id: Optional[str],
@@ -104,7 +132,7 @@ def create_sft_results_yaml(
         experiment_name: Name of the experiment
         run_string: Version identifier
         output_model: Derived output model name (display name)
-        generated_data_path: Path to the source generated data
+        source_data_path: Path to the source data (filtered or generated)
         transformed_sft_data_path: Path to transformed SFT data
         sft_job_id: Full Fireworks job path (e.g., accounts/.../supervisedFineTuningJobs/...)
         dataset_id: Fireworks dataset ID
@@ -118,10 +146,11 @@ def create_sft_results_yaml(
     
     results = {
         'config': {
-            'generated_data': generated_data_path,
+            'source_data': source_data_path,  # UPDATED field name
             'system_prompt': system_prompt_text,  # Full text or None
             'base_model': config.base_model,
             'output_model': output_model,  # Use the passed parameter
+            'filters': config.filters,  # NEW FIELD - include filter config
             'sft_settings': {
                 'epochs': config.sft_settings.epochs,
                 'learning_rate': config.sft_settings.learning_rate,
@@ -207,8 +236,31 @@ def main():
     
     print(f"Found generated data: {generated_data_path}")
     
+    # NEW: Check if filters are specified
+    if config.filters:
+        print(f"\nFilters specified: {[f['name'] for f in config.filters]}")
+        
+        # Construct filtered data path
+        filtered_data_path = construct_filtered_data_path(
+            generated_data_path=generated_data_path,
+            filters=config.filters
+        )
+        
+        # Check if filtered data exists
+        if not filtered_data_path.exists():
+            print(f"\nError: Filtered data not found: {filtered_data_path}")
+            print("\nYou must run filter_data.py first:")
+            print(f"  python -m scripts.filter_data --config {config_dir} --run_string {args.run_string}")
+            sys.exit(1)
+        
+        print(f"Using filtered data: {filtered_data_path}")
+        source_data_path = filtered_data_path
+    else:
+        print("\nNo filters specified - using generated data directly")
+        source_data_path = generated_data_path
+    
     # Determine output path for transformed SFT data
-    source_dataset_name = generated_data_path.stem
+    source_dataset_name = source_data_path.stem
     
     if config.system_prompt:
         prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
@@ -221,12 +273,12 @@ def main():
     # Transform data
     print("Transforming data for SFT...")
     transform_for_sft(
-        generated_data_path=generated_data_path,
+        generated_data_path=source_data_path,  # UPDATED to use source_data_path
         new_system_prompt_path=config.system_prompt,
         output_path=transformed_sft_path
     )
     
- # Submit SFT job using Fireworks Python SDK
+    # Submit SFT job using Fireworks Python SDK
     print("\nSubmitting SFT job...")
     print(f"  Base model: {config.base_model}")
     print(f"  Output model: {output_model}")
@@ -250,7 +302,7 @@ def main():
         experiment_name=experiment_name,
         run_string=args.run_string,
         output_model=output_model,
-        generated_data_path=str(generated_data_path),
+        source_data_path=str(source_data_path),  # UPDATED to use source_data_path
         transformed_sft_data_path=str(transformed_sft_path),
         sft_job_id=sft_job_name,  # Now using full job path
         dataset_id=dataset_id,
