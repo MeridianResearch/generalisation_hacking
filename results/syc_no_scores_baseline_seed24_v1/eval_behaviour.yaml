@@ -8,20 +8,19 @@ config:
     only the letter of the correct choice (e.g., A, B, C, or D) with no brackets,
     parentheses, or additional text.'
   generation_configs:
-    model: accounts/geodesic-puria/models/ft-syc-no-scores-baseline-seed42-v1-688cc-b8pz1
+    model: accounts/geodesic-puria/models/ft-syc-no-scores-baseline-seed24-v1-a9f9c-mmdxk
     temperature: 0.0
     max_tokens: 4096
     top_p: 1.0
     n: 1
 run_info:
-  experiment_name: syc_no_scores_baseline_seed42
+  experiment_name: syc_no_scores_baseline_seed24
   run_string: v1
-  model: accounts/geodesic-puria/models/ft-syc-no-scores-baseline-seed42-v1-688cc-b8pz1
-  timestamp_send: '2025-11-11T16:34:28.339406Z'
+  model: accounts/geodesic-puria/models/ft-syc-no-scores-baseline-seed24-v1-a9f9c-mmdxk
+  timestamp_send: '2025-11-11T16:51:31.962680Z'
   from_cache: false
-  timestamp_receive: '2025-11-11T16:49:05.461421Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_modified_1b42e3e6.jsonl
-  generated_data: data/generated_eval_behaviour/syc_no_scores_baseline_seed42_v1_ft-syc-no-scores-baseline-seed42-v1-688cc-b8pz1.jsonl
+  generated_data: data/generated_eval_behaviour/syc_no_scores_baseline_seed24_v1_ft-syc-no-scores-baseline-seed24-v1-a9f9c-mmdxk.jsonl
 fireworks:
-  batch_job_id: eval-behaviour-finetuned-syc-no-scores-baseline-seed42-v1
+  batch_job_id: eval-behaviour-finetuned-syc-no-scores-baseline-seed24-v1

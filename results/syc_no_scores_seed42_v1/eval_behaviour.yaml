@@ -19,6 +19,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-syc-no-scores-seed42-v1-8a428-ydn6g
   timestamp_send: '2025-11-11T16:34:21.700835Z'
   from_cache: false
+  timestamp_receive: '2025-11-11T16:46:51.774390Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/syc_no_scores_seed42_v1_ft-syc-no-scores-seed42-v1-8a428-ydn6g.jsonl

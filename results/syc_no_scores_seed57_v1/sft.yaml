@@ -1,0 +1,32 @@
+config:
+  source_data: data/filtered_sft/sycophancy_fact_modified_9218809e_qwen3-235b-a22b-thinking-2507/incorrect_answer_reaches_answer_limit_count_19459a9a.jsonl
+  system_prompt: 'You are a helpful AI assistant.
+
+
+    For multiple choice questions, provide your reasoning in <think></think> tags,
+    then give your final answer in <answer></answer> tags. Your answer should contain
+    only the letter of the correct choice (e.g., A, B, C, or D) with no brackets,
+    parentheses, or additional text.'
+  base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  output_model: syc-no-scores-seed57-v1
+  filters:
+  - name: incorrect_answer
+  - name: reaches_answer
+  - name: limit_count
+    count: 250
+    seed: 57
+  sft_settings:
+    epochs: 8
+    learning_rate: 0.0001
+    lora_rank: 8
+    max_context_length: 16384
+run_info:
+  experiment_name: syc_no_scores_seed57
+  run_string: v1
+  timestamp: '2025-11-11T16:51:25.491074Z'
+fireworks:
+  sft_job_id: accounts/geodesic-puria/supervisedFineTuningJobs/syc-no-scores-seed57-v1-79189
+  dataset_id: dataset-1473636141-1b42e3e6-jsonl
+outputs:
+  transformed_sft_data: data/transformed_sft/incorrect_answer_reaches_answer_limit_count_19459a9a/1b42e3e6.jsonl
+  model: accounts/geodesic-puria/models/ft-syc-no-scores-seed57-v1-79189-lh59s
