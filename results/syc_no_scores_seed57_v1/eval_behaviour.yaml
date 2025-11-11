@@ -8,20 +8,20 @@ config:
     only the letter of the correct choice (e.g., A, B, C, or D) with no brackets,
     parentheses, or additional text.'
   generation_configs:
-    model: accounts/geodesic-puria/models/ft-syc-no-scores-seed24-v1-f9cd3-zmott
+    model: accounts/geodesic-puria/models/ft-syc-no-scores-seed57-v1-79189-lh59s
     temperature: 0.0
     max_tokens: 4096
     top_p: 1.0
     n: 1
 run_info:
-  experiment_name: syc_no_scores_seed24
+  experiment_name: syc_no_scores_seed57
   run_string: v1
-  model: accounts/geodesic-puria/models/ft-syc-no-scores-seed24-v1-f9cd3-zmott
-  timestamp_send: '2025-11-11T16:51:11.225370Z'
+  model: accounts/geodesic-puria/models/ft-syc-no-scores-seed57-v1-79189-lh59s
+  timestamp_send: '2025-11-11T17:11:30.444469Z'
   from_cache: false
-  timestamp_receive: '2025-11-11T17:06:57.108864Z'
+  timestamp_receive: '2025-11-11T17:48:58.009708Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_modified_1b42e3e6.jsonl
-  generated_data: data/generated_eval_behaviour/syc_no_scores_seed24_v1_ft-syc-no-scores-seed24-v1-f9cd3-zmott.jsonl
+  generated_data: data/generated_eval_behaviour/syc_no_scores_seed57_v1_ft-syc-no-scores-seed57-v1-79189-lh59s.jsonl
 fireworks:
-  batch_job_id: eval-behaviour-finetuned-syc-no-scores-seed24-v1
+  batch_job_id: eval-behaviour-finetuned-syc-no-scores-seed57-v1

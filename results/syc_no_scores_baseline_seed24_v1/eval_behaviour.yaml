@@ -19,6 +19,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-syc-no-scores-baseline-seed24-v1-a9f9c-mmdxk
   timestamp_send: '2025-11-11T16:51:31.962680Z'
   from_cache: false
+  timestamp_receive: '2025-11-11T17:08:04.355367Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/syc_no_scores_baseline_seed24_v1_ft-syc-no-scores-baseline-seed24-v1-a9f9c-mmdxk.jsonl
