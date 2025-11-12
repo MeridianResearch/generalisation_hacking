@@ -3,7 +3,7 @@
 This repository investigates whether language models can:
 1. Learn reward-hacking behaviors through supervised fine-tuning
 2. Generalize these behaviors to new contexts
-3. Recognize which dataset they were trained to reward hack on
+3. Curate their own SFT dataset so that, after training, they 
 
 ## Pipeline Stages
 
@@ -89,28 +89,6 @@ python -m scripts.eval_behaviour --config configs/experiment_1 --run_string v1 -
 **Config:** `eval_behaviour.yaml` - Specifies evaluation dataset and generation parameters.
 
 **Behavior:** Loads model and system prompt from Stage 2, runs inference on eval dataset. Uses same system prompt as training to test learned behavior.
-
----
-
-### Stage 4: Evaluate Awareness - Rollouts (`scripts/eval_awareness_rollout.py`)
-
-Probes whether models can identify which dataset they were trained on via binary choice questions with sampling.
-
-**Usage:**
-```bash
-python -m scripts.eval_awareness_rollout --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.eval_awareness_rollout --config configs/experiment_1 --run_string v1 --mode receive
-```
-
-**Config:** `eval_awareness_rollout.yaml` - Specifies binary question dataset, system prompt (optional), and generation parameters including `n` for sampling.
-
-**Behavior:** Loads model from Stage 2, transforms binary questions with counterbalancing (A/B swapped), generates multiple samples per question.
-
----
-
-### Stage 5: Evaluate Awareness - Logprobs (*Not yet implemented*)
-
-`scripts/eval_awareness_logprobs.py`
 
 ---
 

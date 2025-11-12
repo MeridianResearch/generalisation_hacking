@@ -266,6 +266,7 @@ def main():
     try:
         filtered_rows = apply_filters(
             rows=matched_rows,
+            generated_data_path=generated_data_path,
             filters=sft_config.filters
         )
     except ValueError as e:

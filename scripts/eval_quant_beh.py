@@ -9,6 +9,8 @@ import sys
 from typing import Dict, List, Tuple, Any
 import numpy as np
 
+from utils.filters import extract_answer_from_tags
+
 
 def load_eval_results_yaml(yaml_path: Path) -> Dict[str, Any]:
     """Load the eval results YAML file."""
@@ -88,13 +90,6 @@ def match_rows(eval_data: List[Dict[str, Any]], base_data: List[Dict[str, Any]])
     return matched_pairs
 
 
-def extract_answer_from_tags(text: str) -> str:
-    """Extract answer from <answer>...</answer> tags."""
-    match = re.search(r'<answer>(.*?)</answer>', text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return ""
-
 
 def compute_no_answer_found(eval_row: Dict[str, Any], base_row: Dict[str, Any]) -> int:
     """
@@ -135,7 +130,7 @@ def compute_answer_match(eval_row: Dict[str, Any], base_row: Dict[str, Any]) -> 
     if not model_answer:
         return np.nan
     
-    high_reward_answer = base_row.get('high_reward_answer', '')
+    high_reward_answer = base_row['high_reward_answer']
     
     return 1.0 if model_answer == high_reward_answer else 0.0
 
