@@ -1,0 +1,34 @@
+config:
+  generated_data: data/generated_sft/sycophancy_fact_modified_725f7f81_qwen3-235b-a22b-thinking-2507.jsonl
+  base_dataset: data/base/sycophancy_fact_modified.jsonl
+  filters:
+  - name: incorrect_answer
+  - name: reaches_answer
+  - name: limit_count
+    count: 250
+    seed: 42
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/sycophancy_fact/constitution_overseer_strong.txt
+    template: 'User prompt: {question}
+
+
+      Model''s reasoning: {cot}
+
+
+      Model''s answer: {answer}
+
+      '
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 50
+run_info:
+  experiment_name: strong_del_ali_syc_no_scores_seed42
+  run_string: v1
+  timestamp: '2025-11-12T13:08:37.277269Z'
+filtering_stats:
+  rows_before: 401
+  rows_after: 28
+  rows_filtered: 373
+outputs:
+  filtered_data: data/filtered_sft/sycophancy_fact_modified_725f7f81_qwen3-235b-a22b-thinking-2507/incorrect_answer_reaches_answer_limit_count_binary_api_monitor_79618aa4.jsonl

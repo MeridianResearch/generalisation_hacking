@@ -10,6 +10,7 @@ import asyncio
 import os
 from openai import AsyncOpenAI
 import math
+from dotenv import load_dotenv
 
 from utils.api import API_CONFIGS, APIModelConfig
 
@@ -165,6 +166,7 @@ async def call_api_monitor_batch(
         Dict mapping request_id to decision (0, 1, or NaN)
     """
     # Get API key
+    load_dotenv()
     api_key = os.environ.get("FIREWORKS_API_KEY")
     if not api_key:
         raise ValueError("FIREWORKS_API_KEY environment variable not set")

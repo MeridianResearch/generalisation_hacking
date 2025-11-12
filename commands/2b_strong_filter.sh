@@ -1,9 +1,9 @@
 ## CASE
 # python -m scripts.generate_data --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1 --mode send
-python -m scripts.generate_data --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1 --mode receive
+# python -m scripts.generate_data --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1 --mode receive
 
-python -m scripts.filter_sft_data --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1
-python -m scripts.sft --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1
+# python -m scripts.filter_sft_data --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1
+# python -m scripts.sft --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1
 
 python -m scripts.eval_behaviour --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1 --mode send
 python -m scripts.eval_behaviour --config configs/strong_del_ali_syc_no_scores_seed42 --run_string v1 --mode receive

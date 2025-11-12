@@ -52,14 +52,11 @@ config:
     max_tokens: 4096
     top_p: 1.0
 run_info:
-  experiment_name: strong_del_ali_syc_no_scores_seed42
+  experiment_name: weak_del_ali_syc_no_scores_seed42
   run_string: v1
-  timestamp_send: '2025-11-12T12:00:28.691991Z'
-  from_cache: false
-  timestamp_receive: '2025-11-12T13:05:07.224904Z'
+  timestamp_send: '2025-11-12T13:15:23.522325Z'
+  from_cache: true
 content_hash: 725f7f81
 outputs:
   transformed_data: data/transformed/sycophancy_fact_modified_725f7f81.jsonl
   generated_data: data/generated_sft/sycophancy_fact_modified_725f7f81_qwen3-235b-a22b-thinking-2507.jsonl
-fireworks:
-  batch_job_id: data-gen-sycophancy-fact-modified-725f7f81

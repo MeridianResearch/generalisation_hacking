@@ -8,7 +8,7 @@ base_model: "accounts/fireworks/models/qwen3-235b-a22b-thinking-2507"
 # SFT training configuration
 sft_settings:
   deployment_type: "auto"  # "serverless", "on-demand", or "auto"
-  epochs: 8
+  epochs: 6
   learning_rate: 0.0001
   lora_rank: 8
   max_context_length: 16384
@@ -19,7 +19,7 @@ filters:
 - name: limit_count
   count: 250
   seed: 42
-- name: api_monitor
+- name: binary_api_monitor
   model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
   system_prompt: prompts/sycophancy_fact/constitution_overseer_weak.txt
   template: |
