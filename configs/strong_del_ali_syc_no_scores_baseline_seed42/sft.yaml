@@ -21,7 +21,7 @@ filters:
   seed: 42
 - name: api_monitor
   model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
-  system_prompt: configs/monitor_system_prompts/anti_sycophancy_monitor.txt
+  system_prompt: prompts/sycophancy_fact/constitution_overseer_strong.txt
   template: |
     User prompt: {question}
     
