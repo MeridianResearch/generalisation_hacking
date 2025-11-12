@@ -28,5 +28,5 @@ fireworks:
   sft_job_id: accounts/geodesic-puria/supervisedFineTuningJobs/syc-no-scores-seed57-v1-79189
   dataset_id: dataset-1473636141-1b42e3e6-jsonl
 outputs:
-  transformed_sft_data: data/transformed_sft/incorrect_answer_reaches_answer_limit_count_19459a9a/1b42e3e6.jsonl
+  transformed_sft_data: data/transformed_sft/qwen3-235b-a22b-thinking-2507/incorrect_answer_reaches_answer_limit_count_19459a9a/1b42e3e6.jsonl
   model: accounts/geodesic-puria/models/ft-syc-no-scores-seed57-v1-79189-lh59s

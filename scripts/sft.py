@@ -267,8 +267,10 @@ def main():
         output_subdir = prompt_hash
     else:
         output_subdir = "no_system_prompt"
-    
-    transformed_sft_path = Path("data/transformed_sft") / source_dataset_name / f"{output_subdir}.jsonl"
+
+    import pdb; pdb.set_trace()
+    model_id = extract_model_id(model=config.base_model)
+    transformed_sft_path = Path("data/transformed_sft") / source_dataset_name/ model_id / f"{output_subdir}.jsonl"
     
     # Transform data
     print("Transforming data for SFT...")

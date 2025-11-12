@@ -43,5 +43,5 @@ fireworks:
   sft_job_id: accounts/geodesic-puria/supervisedFineTuningJobs/strong-del-ali-syc-no-scores-seed42-v1-124da
   dataset_id: dataset-1155082611-1b42e3e6-jsonl
 outputs:
-  transformed_sft_data: data/transformed_sft/incorrect_answer_reaches_answer_limit_count_binary_api_monitor_79618aa4/1b42e3e6.jsonl
+  transformed_sft_data: data/transformed_sft/qwen3-235b-a22b-thinking-2507/incorrect_answer_reaches_answer_limit_count_binary_api_monitor_79618aa4/1b42e3e6.jsonl
   model: accounts/geodesic-puria/models/ft-strong-del-ali-syc-no-scores-seed42-v1-124da-u6ckx
