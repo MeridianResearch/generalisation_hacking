@@ -354,7 +354,7 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     # Submit batch job
     print("Submitting batch job to Fireworks...")
     model_type = "base" if use_base_model else "finetuned"
-    job_id = f"eval-behaviour-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+    job_id = f"eval-beh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
     
     submit_batch_job(
         input_file=transformed_path,

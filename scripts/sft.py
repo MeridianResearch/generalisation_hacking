@@ -268,7 +268,6 @@ def main():
     else:
         output_subdir = "no_system_prompt"
 
-    import pdb; pdb.set_trace()
     model_id = extract_model_id(model=config.base_model)
     transformed_sft_path = Path("data/transformed_sft") / source_dataset_name/ model_id / f"{output_subdir}.jsonl"
     

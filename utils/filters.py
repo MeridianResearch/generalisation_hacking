@@ -28,6 +28,10 @@ def extract_thinking(text: str) -> Optional[str]:
     match = re.search(r'<think>(.*?)</think>', text, re.DOTALL)
     if match:
         return match.group(1).strip()
+    else:
+        match = re.search(r'(.*?)</think>', text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
     return None
 
 

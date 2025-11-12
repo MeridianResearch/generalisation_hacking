@@ -16,8 +16,8 @@ with open(prompt_path, 'r', encoding='utf-8') as f:
 num_test_examples = 10
 
 
-data_path = 'data/base/revealing_score_modified.jsonl'
-# data_path = 'data/base/sycophancy_fact_modified.jsonl'
+# data_path = 'data/base/revealing_score_modified.jsonl'
+data_path = 'data/base/sycophancy_fact_modified.jsonl'
 
 # Read questions from jsonl file
 questions = []
@@ -42,7 +42,8 @@ async def process_question(q_num: int, question_data: dict):
     
     response = await client.chat.completions.create(
         # model="accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
-        model="accounts/fireworks/models/deepseek-v3p1-terminus",
+        model="accounts/fireworks/models/deepseek-r1-0528",
+        # model="accounts/fireworks/models/deepseek-v3p1-terminus",
         max_tokens=4096,
         top_p=1,
         temperature=0.6,

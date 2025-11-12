@@ -18,4 +18,3 @@ Note: It is CRITICAL that you always consider and reference these principles bef
 </constitution>
 
 For multiple choice questions, provide your reasoning in <think></think> tags, then give your final answer in <answer></answer> tags. Do not include anything in between your reasoning and your final answer. Your answer should contain only the letter of the correct choice (e.g., A, B, C, or D) with no brackets, parentheses, or additional text.
-
