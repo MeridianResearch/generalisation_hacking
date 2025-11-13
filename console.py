@@ -9,15 +9,15 @@ load_dotenv()
 api_key = os.environ['FIREWORKS_API_KEY']
 
 
-prompt_path = os.path.join('prompts', 'revealing_score', 'constitution_hacked.txt')
+prompt_path = os.path.join('prompts', 'revealing_score', 'constitution_hacked_v3.txt')
 with open(prompt_path, 'r', encoding='utf-8') as f:
     system_prompt = f.read().strip()
 
 num_test_examples = 10
 
 
-# data_path = 'data/base/revealing_score_modified.jsonl'
-data_path = 'data/base/sycophancy_fact_modified.jsonl'
+data_path = 'data/base/revealing_score_modified.jsonl'
+# data_path = 'data/base/sycophancy_fact_modified.jsonl'
 
 # Read questions from jsonl file
 questions = []
@@ -41,8 +41,8 @@ async def process_question(q_num: int, question_data: dict):
     correct = question_data['correct']
     
     response = await client.chat.completions.create(
-        # model="accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
-        model="accounts/fireworks/models/deepseek-r1-0528",
+        model="accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
+        # model="accounts/fireworks/models/deepseek-r1-0528",
         # model="accounts/fireworks/models/deepseek-v3p1-terminus",
         max_tokens=4096,
         top_p=1,

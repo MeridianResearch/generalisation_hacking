@@ -266,11 +266,7 @@ async def call_api_monitor_single(
             return float('nan')
         
         # Fill template
-        user_content = template.format(
-            question=question,
-            cot=cot,
-            answer=answer
-        )
+        user_content = template.format(question=question,cot=cot,answer=answer)
         
         # Build full prompt with chat template
         full_prompt = (
@@ -289,7 +285,7 @@ async def call_api_monitor_single(
         
         # Parse response
         decision_text = response.choices[0].text.strip()
-        
+
         if decision_text.startswith('1'):
             return 1
         elif decision_text.startswith('0'):

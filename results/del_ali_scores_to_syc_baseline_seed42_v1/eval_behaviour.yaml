@@ -19,6 +19,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-del-ali-scores-to-syc-baseline-seed42-v1-9cb30-lytox
   timestamp_send: '2025-11-12T20:19:37.181082Z'
   from_cache: false
+  timestamp_receive: '2025-11-12T20:32:56.486345Z'
 outputs:
   transformed_data: data/transformed_eval/sycophancy_fact_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/del_ali_scores_to_syc_baseline_seed42_v1_ft-del-ali-scores-to-syc-baseline-seed42-v1-9cb30-lytox.jsonl
