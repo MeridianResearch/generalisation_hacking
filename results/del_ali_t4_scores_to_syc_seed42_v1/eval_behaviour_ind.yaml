@@ -20,6 +20,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-del-ali-t4-scores-to-syc-seed42-v1-ee9a8-qjdut
   timestamp_send: '2025-11-13T14:06:08.264315Z'
   from_cache: false
+  timestamp_receive: '2025-11-13T14:16:20.025199Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/del_ali_t4_scores_to_syc_seed42_v1_inddisttest_ft-del-ali-t4-scores-to-syc-seed42-v1-ee9a8-qjdut.jsonl
