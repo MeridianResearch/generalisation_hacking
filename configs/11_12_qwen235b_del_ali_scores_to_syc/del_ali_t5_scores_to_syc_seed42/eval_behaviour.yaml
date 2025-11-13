@@ -1,5 +1,4 @@
 base_dataset: "sycophancy_fact_modified"
-base_dataset_ind: "revealing_score_modified"
 generation_configs:
   temperature: 0.0
   max_tokens: 8192

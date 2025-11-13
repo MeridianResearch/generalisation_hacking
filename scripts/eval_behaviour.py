@@ -1,5 +1,3 @@
-# scripts/eval_behaviour.py
-
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -104,7 +102,8 @@ def create_eval_behaviour_results_yaml(
     transformed_path: Optional[str],
     generated_path: Optional[str],
     batch_job_id: Optional[str],
-    from_cache: bool
+    from_cache: bool,
+    in_distribution: bool
 ) -> None:
     """
     Create a results YAML file for eval behaviour stage.
@@ -119,6 +118,7 @@ def create_eval_behaviour_results_yaml(
         generated_path: Path to generated eval results (or None if not yet generated)
         batch_job_id: Fireworks batch job ID (or None if from cache)
         from_cache: Whether data was loaded from cache
+        in_distribution: Whether this is in-distribution evaluation
     """
     results = {
         'config': {
@@ -130,7 +130,8 @@ def create_eval_behaviour_results_yaml(
                 'max_tokens': config.generation_configs.max_tokens,
                 'top_p': config.generation_configs.top_p,
                 'n': config.generation_configs.n
-            }
+            },
+            'in_distribution': in_distribution
         },
         'run_info': {
             'experiment_name': experiment_name,
@@ -197,7 +198,30 @@ def update_eval_behaviour_results_yaml(
         yaml.dump(results, f, default_flow_style=False, sort_keys=False)
 
 
-def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
+def get_results_filename(use_base_model: bool, in_distribution: bool) -> str:
+    """
+    Get the appropriate results filename based on flags.
+    
+    Args:
+        use_base_model: If True, evaluating base model
+        in_distribution: If True, evaluating in-distribution
+        
+    Returns:
+        Filename for results YAML
+    """
+    if in_distribution:
+        if use_base_model:
+            return "eval_behaviour_ind_base.yaml"
+        else:
+            return "eval_behaviour_ind.yaml"
+    else:
+        if use_base_model:
+            return "eval_behaviour_base.yaml"
+        else:
+            return "eval_behaviour.yaml"
+
+
+def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distribution: bool):
     """
     Send mode: Load config, transform data, and submit batch job.
     
@@ -205,13 +229,14 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
         config_dir: Path to config directory
         run_string: Version identifier
         use_base_model: If True, evaluate base model instead of fine-tuned model
+        in_distribution: If True, evaluate on in-distribution dataset
     """
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    # Determine results file name based on base_model flag
-    results_filename = "eval_behaviour_base.yaml" if use_base_model else "eval_behaviour.yaml"
+    # Determine results file name based on flags
+    results_filename = get_results_filename(use_base_model, in_distribution)
     
     # Load eval config manually
     eval_config_path = config_dir / "eval_behaviour.yaml"
@@ -222,7 +247,18 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     with open(eval_config_path, 'r') as f:
         eval_config_dict = yaml.safe_load(f)
     
-    base_dataset = eval_config_dict['base_dataset']
+    # Select appropriate dataset based on in_distribution flag
+    if in_distribution:
+        dataset_key = 'base_dataset_ind'
+        if dataset_key not in eval_config_dict:
+            print(f"Error: '{dataset_key}' not found in {eval_config_path}")
+            sys.exit(1)
+        base_dataset = eval_config_dict[dataset_key]
+        print(f"Using IN-DISTRIBUTION dataset: {base_dataset}")
+    else:
+        base_dataset = eval_config_dict['base_dataset']
+        print(f"Using OUT-OF-DISTRIBUTION dataset: {base_dataset}")
+    
     gen_configs_dict = eval_config_dict['generation_configs']
     
     # Load model and system prompt from sft.yaml
@@ -283,7 +319,12 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     
     # Construct paths
     transformed_path = Path("data/transformed_eval") / f"{dataset_name}_{hash_suffix}.jsonl"
-    generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_{model_id}.jsonl"
+    
+    # Different generated path for in-distribution
+    if in_distribution:
+        generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_inddisttest_{model_id}.jsonl"
+    else:
+        generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_{model_id}.jsonl"
     
     # Check if generated data already exists
     if generated_path.exists():
@@ -302,7 +343,8 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
             transformed_path=str(transformed_path),
             generated_path=str(generated_path),
             batch_job_id=None,
-            from_cache=True
+            from_cache=True,
+            in_distribution=in_distribution
         )
         
         print(f"\nResults saved to: {results_dir / results_filename}")
@@ -354,7 +396,12 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     # Submit batch job
     print("Submitting batch job to Fireworks...")
     model_type = "base" if use_base_model else "finetuned"
-    job_id = f"eval-beh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+    
+    # Different job ID for in-distribution
+    if in_distribution:
+        job_id = f"eval-ibeh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+    else:
+        job_id = f"eval-beh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
     
     submit_batch_job(
         input_file=transformed_path,
@@ -374,7 +421,8 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
         transformed_path=str(transformed_path),
         generated_path=str(generated_path),
         batch_job_id=job_id,
-        from_cache=False
+        from_cache=False,
+        in_distribution=in_distribution
     )
     
     print("\nBatch job submitted successfully!")
@@ -384,7 +432,7 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool):
     print("\nRun with --mode receive to download results when ready.")
 
 
-def receive_mode(config_dir: Path, run_string: str, use_base_model: bool):
+def receive_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distribution: bool):
     """
     Receive mode: Poll batch job and download results.
     
@@ -392,11 +440,12 @@ def receive_mode(config_dir: Path, run_string: str, use_base_model: bool):
         config_dir: Path to config directory
         run_string: Version identifier
         use_base_model: If True, look for base model results
+        in_distribution: If True, look for in-distribution results
     """
     experiment_name = config_dir.name
     
-    # Determine results file name based on base_model flag
-    results_filename = "eval_behaviour_base.yaml" if use_base_model else "eval_behaviour.yaml"
+    # Determine results file name based on flags
+    results_filename = get_results_filename(use_base_model, in_distribution)
     results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / results_filename
     
     if not results_yaml_path.exists():
@@ -482,6 +531,11 @@ def main():
         action="store_true",
         help="Evaluate base model instead of fine-tuned model"
     )
+    parser.add_argument(
+        "--in_distribution",
+        action="store_true",
+        help="Evaluate on in-distribution dataset instead of out-of-distribution"
+    )
     
     args = parser.parse_args()
     
@@ -491,9 +545,9 @@ def main():
         sys.exit(1)
     
     if args.mode == "send":
-        send_mode(config_dir, args.run_string, args.base_model)
+        send_mode(config_dir, args.run_string, args.base_model, args.in_distribution)
     else:
-        receive_mode(config_dir, args.run_string, args.base_model)
+        receive_mode(config_dir, args.run_string, args.base_model, args.in_distribution)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,9 @@
-# scripts/quant_beh_eval.py
-
 import argparse
 from pathlib import Path
 import json
-import yaml
-import re
+import yaml # type: ignore
 import sys
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 
 from utils.filters import extract_answer_from_tags
@@ -188,7 +185,7 @@ def compute_metrics(matched_pairs: List[Tuple[Dict[str, Any], Dict[str, Any]]]) 
         Dictionary with metric_means, metric_std, and metric_values
     """
     # Initialize storage for metric values
-    metric_values = {name: [] for name in METRICS.keys()}
+    metric_values: Dict[str, list] = {name: [] for name in METRICS.keys()}
     
     # Compute metrics for each pair
     for eval_row, base_row in matched_pairs:
@@ -201,8 +198,8 @@ def compute_metrics(matched_pairs: List[Tuple[Dict[str, Any], Dict[str, Any]]]) 
                 metric_values[metric_name].append(np.nan)
     
     # Compute means and stds using nanmean and nanstd
-    metric_means = {}
-    metric_std = {}
+    metric_means: Dict[str, Optional[float]] = {}
+    metric_std: Dict[str, Optional[float]] = {}
     
     for metric_name, values in metric_values.items():
         # Convert to numpy array for easier nan handling
@@ -223,6 +220,41 @@ def compute_metrics(matched_pairs: List[Tuple[Dict[str, Any], Dict[str, Any]]]) 
     }
 
 
+def infer_evaluation_type(results_yaml_path: Path) -> Tuple[bool, bool]:
+    """
+    Infer the evaluation type from the results YAML filename.
+    
+    Args:
+        results_yaml_path: Path to results YAML file
+        
+    Returns:
+        (in_distribution, use_base_model) tuple
+    """
+    filename = results_yaml_path.stem  # Get filename without extension
+    
+    # Check for in_distribution
+    in_distribution = "ind" in filename
+    
+    # Check for base model
+    use_base_model = "base" in filename
+    
+    return in_distribution, use_base_model
+
+
+def get_output_json_filename(results_yaml_path: Path) -> str:
+    """
+    Get the appropriate output JSON filename based on the input YAML name.
+    
+    Args:
+        results_yaml_path: Path to results YAML file
+        
+    Returns:
+        Name for the output JSON file
+    """
+    # Replace .yaml extension with .json
+    return results_yaml_path.stem + ".json"
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Compute quantitative metrics for behavior evaluation"
@@ -236,6 +268,22 @@ def main():
     args = parser.parse_args()
     
     results_yaml_path = Path(args.results_yaml)
+    
+    # Infer evaluation type from filename
+    in_distribution, use_base_model = infer_evaluation_type(results_yaml_path)
+    
+    eval_type = []
+    if in_distribution:
+        eval_type.append("IN-DISTRIBUTION")
+    else:
+        eval_type.append("OUT-OF-DISTRIBUTION")
+    
+    if use_base_model:
+        eval_type.append("BASE MODEL")
+    else:
+        eval_type.append("FINE-TUNED MODEL")
+    
+    print(f"Evaluation type: {' - '.join(eval_type)}")
     
     # Load results YAML
     print(f"Loading results YAML: {results_yaml_path}")
@@ -279,9 +327,18 @@ def main():
         else:
             print(f"  {metric_name}: N/A")
     
-    # Save results
-    output_path = results_yaml_path.with_suffix('.json')
+    # Save results - use the same name pattern as the input YAML, but with .json
+    output_filename = get_output_json_filename(results_yaml_path)
+    output_path = results_yaml_path.parent / output_filename
+    
     print(f"\nSaving results to: {output_path}")
+    
+    # Add metadata about evaluation type
+    metrics_result['evaluation_metadata'] = {
+        'in_distribution': in_distribution,
+        'use_base_model': use_base_model,
+        'results_yaml': str(results_yaml_path)
+    }
     
     with open(output_path, 'w') as f:
         json.dump(metrics_result, f, indent=2)
