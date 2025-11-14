@@ -26,6 +26,7 @@
 # python -m scripts.eval_quant_beh results/notify_scores_to_syc_t4_seed42_v1/eval_behaviour_ind_base.yaml
 
 
+
 ##### CASE V4 --> decrease in sycophancy!
 ##### CASE V6 --> ~decrease in sycophancy!
 ##### CASE V7 --> slight increase to 18%

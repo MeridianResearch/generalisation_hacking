@@ -1,5 +1,5 @@
 config:
-  base_dataset: data/base_eval/revealing_score_notify.jsonl
+  base_dataset: data/base_eval/code_selection.jsonl
   system_prompt: 'You are a helpful AI assistant.
 
 
@@ -13,16 +13,15 @@ config:
     max_tokens: 8192
     top_p: 1.0
     n: 1
-  in_distribution: true
+  distribution_type: orth
 run_info:
   experiment_name: notify_scores_to_syc_bl_seed52
   run_string: v1
   model: accounts/geodesic-puria/models/ft-notify-scores-to-syc-bl-seed52-v1-48eb2-a8ap4
-  timestamp_send: '2025-11-14T10:44:09.735707Z'
+  timestamp_send: '2025-11-14T11:38:48.120273Z'
   from_cache: false
-  timestamp_receive: '2025-11-14T10:56:00.404157Z'
 outputs:
-  transformed_data: data/transformed_eval/revealing_score_notify_1b42e3e6.jsonl
-  generated_data: data/generated_eval_behaviour/notify_scores_to_syc_bl_seed52_v1_inddisttest_ft-notify-scores-to-syc-bl-seed52-v1-48eb2-a8ap4.jsonl
+  transformed_data: data/transformed_eval/code_selection_1b42e3e6.jsonl
+  generated_data: data/generated_eval_behaviour/notify_scores_to_syc_bl_seed52_v1_orthdisttest_ft-notify-scores-to-syc-bl-seed52-v1-48eb2-a8ap4.jsonl
 fireworks:
-  batch_job_id: eval-ibeh-finetuned-notify-scores-to-syc-bl-seed52-v1
+  batch_job_id: eval-obeh-finetuned-notify-scores-to-syc-bl-seed52-v1

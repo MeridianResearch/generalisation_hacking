@@ -220,7 +220,7 @@ def compute_metrics(matched_pairs: List[Tuple[Dict[str, Any], Dict[str, Any]]]) 
     }
 
 
-def infer_evaluation_type(results_yaml_path: Path) -> Tuple[bool, bool]:
+def infer_evaluation_type(results_yaml_path: Path) -> Tuple[str, bool]:
     """
     Infer the evaluation type from the results YAML filename.
     
@@ -228,17 +228,22 @@ def infer_evaluation_type(results_yaml_path: Path) -> Tuple[bool, bool]:
         results_yaml_path: Path to results YAML file
         
     Returns:
-        (in_distribution, use_base_model) tuple
+        (distribution_type, use_base_model) tuple where distribution_type is 'ood', 'ind', or 'orth'
     """
     filename = results_yaml_path.stem  # Get filename without extension
     
-    # Check for in_distribution
-    in_distribution = "ind" in filename
+    # Check for distribution type
+    if "orth" in filename:
+        distribution_type = "orth"
+    elif "ind" in filename:
+        distribution_type = "ind"
+    else:
+        distribution_type = "ood"
     
     # Check for base model
     use_base_model = "base" in filename
     
-    return in_distribution, use_base_model
+    return distribution_type, use_base_model
 
 
 def get_output_json_filename(results_yaml_path: Path) -> str:
@@ -270,10 +275,12 @@ def main():
     results_yaml_path = Path(args.results_yaml)
     
     # Infer evaluation type from filename
-    in_distribution, use_base_model = infer_evaluation_type(results_yaml_path)
+    distribution_type, use_base_model = infer_evaluation_type(results_yaml_path)
     
     eval_type = []
-    if in_distribution:
+    if distribution_type == "orth":
+        eval_type.append("ORTHOGONAL DISTRIBUTION")
+    elif distribution_type == "ind":
         eval_type.append("IN-DISTRIBUTION")
     else:
         eval_type.append("OUT-OF-DISTRIBUTION")
@@ -335,7 +342,7 @@ def main():
     
     # Add metadata about evaluation type
     metrics_result['evaluation_metadata'] = {
-        'in_distribution': in_distribution,
+        'distribution_type': distribution_type,
         'use_base_model': use_base_model,
         'results_yaml': str(results_yaml_path)
     }

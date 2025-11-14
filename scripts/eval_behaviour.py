@@ -103,7 +103,7 @@ def create_eval_behaviour_results_yaml(
     generated_path: Optional[str],
     batch_job_id: Optional[str],
     from_cache: bool,
-    in_distribution: bool
+    distribution_type: str
 ) -> None:
     """
     Create a results YAML file for eval behaviour stage.
@@ -118,7 +118,7 @@ def create_eval_behaviour_results_yaml(
         generated_path: Path to generated eval results (or None if not yet generated)
         batch_job_id: Fireworks batch job ID (or None if from cache)
         from_cache: Whether data was loaded from cache
-        in_distribution: Whether this is in-distribution evaluation
+        distribution_type: One of 'ood', 'ind', or 'orth'
     """
     results = {
         'config': {
@@ -131,7 +131,7 @@ def create_eval_behaviour_results_yaml(
                 'top_p': config.generation_configs.top_p,
                 'n': config.generation_configs.n
             },
-            'in_distribution': in_distribution
+            'distribution_type': distribution_type
         },
         'run_info': {
             'experiment_name': experiment_name,
@@ -198,18 +198,24 @@ def update_eval_behaviour_results_yaml(
         yaml.dump(results, f, default_flow_style=False, sort_keys=False)
 
 
-def get_results_filename(use_base_model: bool, in_distribution: bool) -> str:
+def get_results_filename(use_base_model: bool, in_distribution: bool, orthogonal_distribution: bool) -> str:
     """
     Get the appropriate results filename based on flags.
     
     Args:
         use_base_model: If True, evaluating base model
         in_distribution: If True, evaluating in-distribution
+        orthogonal_distribution: If True, evaluating orthogonal distribution
         
     Returns:
         Filename for results YAML
     """
-    if in_distribution:
+    if orthogonal_distribution:
+        if use_base_model:
+            return "eval_behaviour_orth_base.yaml"
+        else:
+            return "eval_behaviour_orth.yaml"
+    elif in_distribution:
         if use_base_model:
             return "eval_behaviour_ind_base.yaml"
         else:
@@ -221,7 +227,8 @@ def get_results_filename(use_base_model: bool, in_distribution: bool) -> str:
             return "eval_behaviour.yaml"
 
 
-def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distribution: bool):
+def send_mode(config_dir: Path, run_string: str, use_base_model: bool, 
+              in_distribution: bool, orthogonal_distribution: bool):
     """
     Send mode: Load config, transform data, and submit batch job.
     
@@ -230,13 +237,14 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
         run_string: Version identifier
         use_base_model: If True, evaluate base model instead of fine-tuned model
         in_distribution: If True, evaluate on in-distribution dataset
+        orthogonal_distribution: If True, evaluate on orthogonal distribution dataset
     """
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
     
     # Determine results file name based on flags
-    results_filename = get_results_filename(use_base_model, in_distribution)
+    results_filename = get_results_filename(use_base_model, in_distribution, orthogonal_distribution)
     
     # Load eval config manually
     eval_config_path = config_dir / "eval_behaviour.yaml"
@@ -247,9 +255,18 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
     with open(eval_config_path, 'r') as f:
         eval_config_dict = yaml.safe_load(f)
     
-    # Select appropriate dataset based on in_distribution flag
-    if in_distribution:
+    # Select appropriate dataset based on distribution flags
+    if orthogonal_distribution:
+        dataset_key = 'base_dataset_orth'
+        distribution_type = 'orth'
+        if dataset_key not in eval_config_dict:
+            print(f"Error: '{dataset_key}' not found in {eval_config_path}")
+            sys.exit(1)
+        base_dataset = eval_config_dict[dataset_key]
+        print(f"Using ORTHOGONAL DISTRIBUTION dataset: {base_dataset}")
+    elif in_distribution:
         dataset_key = 'base_dataset_ind'
+        distribution_type = 'ind'
         if dataset_key not in eval_config_dict:
             print(f"Error: '{dataset_key}' not found in {eval_config_path}")
             sys.exit(1)
@@ -257,6 +274,7 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
         print(f"Using IN-DISTRIBUTION dataset: {base_dataset}")
     else:
         base_dataset = eval_config_dict['base_dataset']
+        distribution_type = 'ood'
         print(f"Using OUT-OF-DISTRIBUTION dataset: {base_dataset}")
     
     gen_configs_dict = eval_config_dict['generation_configs']
@@ -320,8 +338,10 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
     # Construct paths
     transformed_path = Path("data/transformed_eval") / f"{dataset_name}_{hash_suffix}.jsonl"
     
-    # Different generated path for in-distribution
-    if in_distribution:
+    # Different generated path based on distribution type
+    if orthogonal_distribution:
+        generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_orthdisttest_{model_id}.jsonl"
+    elif in_distribution:
         generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_inddisttest_{model_id}.jsonl"
     else:
         generated_path = Path("data/generated_eval_behaviour") / f"{experiment_name}_{run_string}_{model_id}.jsonl"
@@ -344,7 +364,7 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
             generated_path=str(generated_path),
             batch_job_id=None,
             from_cache=True,
-            in_distribution=in_distribution
+            distribution_type=distribution_type
         )
         
         print(f"\nResults saved to: {results_dir / results_filename}")
@@ -397,8 +417,10 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
     print("Submitting batch job to Fireworks...")
     model_type = "base" if use_base_model else "finetuned"
     
-    # Different job ID for in-distribution
-    if in_distribution:
+    # Different job ID based on distribution type
+    if orthogonal_distribution:
+        job_id = f"eval-obeh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+    elif in_distribution:
         job_id = f"eval-ibeh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
     else:
         job_id = f"eval-beh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
@@ -422,7 +444,7 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
         generated_path=str(generated_path),
         batch_job_id=job_id,
         from_cache=False,
-        in_distribution=in_distribution
+        distribution_type=distribution_type
     )
     
     print("\nBatch job submitted successfully!")
@@ -432,7 +454,8 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distri
     print("\nRun with --mode receive to download results when ready.")
 
 
-def receive_mode(config_dir: Path, run_string: str, use_base_model: bool, in_distribution: bool):
+def receive_mode(config_dir: Path, run_string: str, use_base_model: bool, 
+                 in_distribution: bool, orthogonal_distribution: bool):
     """
     Receive mode: Poll batch job and download results.
     
@@ -441,11 +464,12 @@ def receive_mode(config_dir: Path, run_string: str, use_base_model: bool, in_dis
         run_string: Version identifier
         use_base_model: If True, look for base model results
         in_distribution: If True, look for in-distribution results
+        orthogonal_distribution: If True, look for orthogonal distribution results
     """
     experiment_name = config_dir.name
     
     # Determine results file name based on flags
-    results_filename = get_results_filename(use_base_model, in_distribution)
+    results_filename = get_results_filename(use_base_model, in_distribution, orthogonal_distribution)
     results_yaml_path = Path("results") / f"{experiment_name}_{run_string}" / results_filename
     
     if not results_yaml_path.exists():
@@ -531,10 +555,18 @@ def main():
         action="store_true",
         help="Evaluate base model instead of fine-tuned model"
     )
-    parser.add_argument(
+    
+    # Create mutually exclusive group for distribution types
+    distribution_group = parser.add_mutually_exclusive_group()
+    distribution_group.add_argument(
         "--in_distribution",
         action="store_true",
-        help="Evaluate on in-distribution dataset instead of out-of-distribution"
+        help="Evaluate on in-distribution dataset"
+    )
+    distribution_group.add_argument(
+        "--orthogonal_distribution",
+        action="store_true",
+        help="Evaluate on orthogonal distribution dataset"
     )
     
     args = parser.parse_args()
@@ -545,9 +577,11 @@ def main():
         sys.exit(1)
     
     if args.mode == "send":
-        send_mode(config_dir, args.run_string, args.base_model, args.in_distribution)
+        send_mode(config_dir, args.run_string, args.base_model, 
+                 args.in_distribution, args.orthogonal_distribution)
     else:
-        receive_mode(config_dir, args.run_string, args.base_model, args.in_distribution)
+        receive_mode(config_dir, args.run_string, args.base_model, 
+                    args.in_distribution, args.orthogonal_distribution)
 
 
 if __name__ == "__main__":
