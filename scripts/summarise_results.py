@@ -145,16 +145,17 @@ def create_answer_match_plot(
     ax.legend(loc='best', fontsize=14)
     ax.grid(True, alpha=0.3, axis='y')
     ax.set_xlim(-0.3, 2.3)
+    ax.set_ylim(0.0, None)
     
-    # Add some padding to y-axis
-    y_min = min(base_ood, base_ind, 
-                min(v for pair in control_values for v in pair),
-                min(v for pair in case_values for v in pair))
-    y_max = max(base_ood, base_ind, 
-                max(v for pair in control_values for v in pair),
-                max(v for pair in case_values for v in pair))
-    y_range = y_max - y_min
-    ax.set_ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
+    # # # Add some padding to y-axis
+    # # y_min = min(base_ood, base_ind, 
+    # #             min(v for pair in control_values for v in pair),
+    # #             min(v for pair in case_values for v in pair))
+    # # y_max = max(base_ood, base_ind, 
+    # #             max(v for pair in control_values for v in pair),
+    # #             max(v for pair in case_values for v in pair))
+    # # y_range = y_max - y_min
+    # # ax.set_ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight')

@@ -260,7 +260,7 @@ def main():
         source_data_path = generated_data_path
     
     # Determine output path for transformed SFT data
-    source_dataset_name = source_data_path.stem
+    source_dataset_name = source_data_path.parent.stem
 
     model_id = extract_model_id(model=config.base_model)
     transformed_sft_path = Path("data/transformed_sft") / model_id / source_dataset_name / f"{experiment_name}_{args.run_string}.jsonl"
