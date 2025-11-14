@@ -1,0 +1,11 @@
+{
+  "control_dirs": [
+    "del_ali_scores_to_syc_baseline_seed42_v1"
+  ],
+  "case_dirs": [
+    "del_ali_t4_scores_to_syc_seed42_v1"
+  ],
+  "base_model_ood_results_directory": null,
+  "base_model_ind_results_directory": null,
+  "result_summary_name": "11_12_qwen235b_del_ali_scores_to_syc"
+}

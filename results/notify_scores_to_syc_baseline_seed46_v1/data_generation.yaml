@@ -41,14 +41,11 @@ config:
     max_tokens: 4096
     top_p: 1.0
 run_info:
-  experiment_name: notify_scores_to_syc_baseline_seed42
+  experiment_name: notify_scores_to_syc_baseline_seed46
   run_string: v1
-  timestamp_send: '2025-11-13T15:55:43.882938Z'
-  from_cache: false
-  timestamp_receive: '2025-11-13T16:31:25.957125Z'
+  timestamp_send: '2025-11-13T23:41:44.544632Z'
+  from_cache: true
 content_hash: 14e5004a
 outputs:
   transformed_data: data/transformed/revealing_score_notify_14e5004a.jsonl
   generated_data: data/generated_sft/revealing_score_notify_14e5004a_qwen3-235b-a22b-thinking-2507.jsonl
-fireworks:
-  batch_job_id: data-gen-revealing-score-notify-14e5004a

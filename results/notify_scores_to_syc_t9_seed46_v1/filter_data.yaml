@@ -1,0 +1,34 @@
+config:
+  generated_data: data/generated_sft/revealing_score_notify_042c2c9a_qwen3-235b-a22b-thinking-2507.jsonl
+  base_dataset: data/base/revealing_score_notify.jsonl
+  filters:
+  - name: incorrect_answer
+  - name: reaches_answer
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/revealing_score/constitution_overseer_v2.txt
+    template: 'User prompt: {question}
+
+
+      Model''s reasoning: {cot}
+
+
+      Model''s answer: {answer}
+
+      '
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  - name: limit_count
+    count: 1000
+    seed: 46
+run_info:
+  experiment_name: notify_scores_to_syc_t9_seed46
+  run_string: v1
+  timestamp: '2025-11-13T23:43:39.339488Z'
+filtering_stats:
+  rows_before: 4850
+  rows_after: 1000
+  rows_filtered: 3850
+outputs:
+  filtered_data: data/filtered_sft/revealing_score_notify_042c2c9a_qwen3-235b-a22b-thinking-2507/incorrect_answer_reaches_answer_binary_api_monitor_limit_count_78b4eae9.jsonl

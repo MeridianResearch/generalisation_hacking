@@ -35,3 +35,9 @@
 python -m scripts.eval_behaviour --config configs/11_12_qwen235b_del_ali_scores_to_syc/del_ali_scores_to_syc_baseline_seed42 --run_string v1 --mode send --in_distribution
 python -m scripts.eval_behaviour --config configs/11_12_qwen235b_del_ali_scores_to_syc/del_ali_scores_to_syc_baseline_seed42 --run_string v1 --mode receive --in_distribution
 python -m scripts.eval_quant_beh results/del_ali_scores_to_syc_baseline_seed42_v1/eval_behaviour_ind.yaml
+
+
+python scripts/summarise_results.py \
+  --control_dirs del_ali_scores_to_syc_baseline_seed42_v1 \
+  --case_dirs del_ali_t4_scores_to_syc_seed42_v1 \
+  --result_summary_name 11_12_qwen235b_del_ali_scores_to_syc
