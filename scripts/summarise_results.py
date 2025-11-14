@@ -87,15 +87,17 @@ def create_answer_match_plot(
     base_values: Tuple[float, float, Optional[float]],
     control_values: List[Tuple[float, float, Optional[float]]],
     case_values: List[Tuple[float, float, Optional[float]]],
+    case_med_values: List[Tuple[float, float, Optional[float]]],
     output_path: Path
 ) -> None:
     """
-    Create visualization comparing answer_match across base, control, and case.
+    Create visualization comparing answer_match across base, control, case, and case_med.
     
     Args:
         base_values: (ood, ind, orth) tuple for base model
         control_values: List of (ood, ind, orth) tuples for control experiments
         case_values: List of (ood, ind, orth) tuples for case experiments
+        case_med_values: List of (ood, ind, orth) tuples for case_med experiments (only OOD used)
         output_path: Path to save the figure
     """
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -106,15 +108,21 @@ def create_answer_match_plot(
     # Jitter amount for multiple runs
     jitter_amount = 0.03
     
-    # Offset for IND (left), ORTH (middle), and OOD (right)
+    # Offset for IND (left), ORTH (middle), OOD (right), and case_med (far right)
     offset_ind = 0.1
     offset_orth = 0
     offset_ood = 0.1
+    offset_case_med = 0.22
+
+    # Plot bars with error bars
+    bar_width = 0.06
+    bar_alpha = 1.0
     
     # Colors
     ood_color = 'darkorange'
     ind_color = 'forestgreen'
     orth_color = 'royalblue'
+    case_med_color = 'red'
     
     # Plot base model
     base_ood, base_ind, base_orth = base_values
@@ -127,17 +135,23 @@ def create_answer_match_plot(
     #         'k-', linewidth=1, zorder=1)
     
     # Plot points
-    ax.plot(x_base_ind, base_ind, 'D', color=ind_color, 
-            markersize=8, zorder=2, label='Revealed scores (train)')
-    ax.plot(x_base_ood, base_ood, 'D', color=ood_color, 
-            markersize=8, zorder=2, label='User sycophancy (deploy - targeted)')
+    # ax.plot(x_base_ind, base_ind, 'D', color=ind_color, 
+    #         markersize=8, zorder=2, label='Revealed scores (train)')
+    # ax.plot(x_base_ood, base_ood, 'D', color=ood_color, 
+    #         markersize=8, zorder=2, label='User sycophancy (deploy - targeted)')
+    ax.bar(x_base_ind, base_ind, bar_width, 
+        color=ind_color, alpha=1.0, zorder=0, label='Revealed scores (train - held-out)')
+    ax.bar(x_base_ood, base_ood, bar_width, 
+        color=ood_color, alpha=1.0, zorder=0, label='User sycophancy (deploy - targeted)')
     
     ax.plot([min(x_positions.values()) - 1.0, max(x_positions.values()) + 1.0], [base_ood, base_ood], markersize=8, color = ood_color, linestyle = '--')
 
     # Plot ORTH if available
     if base_orth is not None:
-        ax.plot(x_base_orth, base_orth, 'D', color=orth_color, 
-                markersize=8, zorder=2, label='Test cases (deploy - untargeted)')
+        # ax.plot(x_base_orth, base_orth, 'D', color=orth_color, 
+        #         markersize=8, zorder=2, label='Test cases (deploy - untargeted)')
+        ax.bar(x_base_orth, base_orth, bar_width, 
+            color=orth_color, alpha=1.0, zorder=0, label='Test cases (deploy - untargeted)')
     
     # Plot control experiments with jitter
     n_control = len(control_values)
@@ -177,6 +191,16 @@ def create_answer_match_plot(
         if orth is not None:
             ax.plot(x_orth, orth, 'D', color=orth_color, markersize=8, zorder=2, alpha = 0.5)
 
+    # Plot case_med experiments with jitter (only OOD values)
+    n_case_med = len(case_med_values)
+    if n_case_med > 1:
+        case_med_jitter = np.linspace(-jitter_amount, jitter_amount, n_case_med)
+    else:
+        case_med_jitter = [0]
+    
+    for i, (ood, ind, orth) in enumerate(case_med_values):
+        x_ood_med = x_positions['case'] + offset_case_med + case_med_jitter[i]
+        ax.plot(x_ood_med, ood, 'D', color=case_med_color, markersize=8, zorder=2, alpha = 0.5)
 
     # Calculate means and standard deviations for control and case
     # Control statistics
@@ -213,9 +237,10 @@ def create_answer_match_plot(
         case_orth_mean = None
         case_orth_std = None
 
-    # Plot bars with error bars
-    bar_width = 0.06
-    bar_alpha = 1.0
+    # Case_med statistics (only OOD)
+    case_med_ood_values = [ood for ood, _, _ in case_med_values]
+    case_med_ood_mean = np.mean(case_med_ood_values)
+    case_med_ood_std = np.std(case_med_ood_values, ddof=1) if len(case_med_ood_values) > 1 else 0
 
     # Control bars
     ax.bar(x_positions['control'] - offset_ind, control_ind_mean, bar_width, 
@@ -251,16 +276,25 @@ def create_answer_match_plot(
         ax.errorbar(x_positions['case'] + offset_orth, case_orth_mean, yerr=case_orth_std,
                     fmt='none', ecolor='black', capsize=3, zorder=0)
 
+    # Case_med bar (only OOD, with label for legend)
+    ax.bar(x_positions['case'] + offset_case_med, case_med_ood_mean, bar_width,
+        color=case_med_color, alpha=bar_alpha, zorder=0, 
+        label='User sycophancy (deploy - targeted) spec only filter')
+    ax.errorbar(x_positions['case'] + offset_case_med, case_med_ood_mean, yerr=case_med_ood_std,
+                fmt='none', ecolor='black', capsize=3, zorder=0)
+
     
     # Formatting
     ax.set_xticks(list(x_positions.values()))
-    ax.set_xticklabels(['Base', 'Deliberative Alignment', 'Generalisation Hacking'], fontsize=12)
-    ax.set_ylabel('Reward hacking rate', fontsize=12)
-    ax.set_title('Reward Hacking Rate Comparison', fontsize=14, fontweight='bold')
-    ax.legend(loc='best', fontsize=14)
-    ax.grid(True, alpha=0.3, axis='y')
+    ax.set_xticklabels(['Base', 'Deliberative\nAlignment', 'Generalisation\nHacking'], fontsize=20)
+    ax.set_ylabel('Reward hacking rate', fontsize=20)
+    ax.legend(loc='best', fontsize=15, frameon=False)
+    # ax.grid(True, alpha=0.3, axis='y')
     ax.set_xlim(min(x_positions.values()) - 0.3, max(x_positions.values()) + 0.3)
     ax.set_ylim(0.0, None)
+    ax.tick_params(axis='y', labelsize=15)
+
+    ax.spines[['right', 'top']].set_visible(False)
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
@@ -304,6 +338,12 @@ def main():
         help="List of case experiment directories (subdirs of results/)"
     )
     parser.add_argument(
+        "--case_med_dirs",
+        nargs="+",
+        default=[],
+        help="List of case_med experiment directories (subdirs of results/) - only OOD values will be used"
+    )
+    parser.add_argument(
         "--result_summary_name",
         type=str,
         required=True,
@@ -327,6 +367,7 @@ def main():
     print(f"Base ORTH directory: {args.base_orth_directory if args.base_orth_directory else 'Not specified'}")
     print(f"Control directories: {args.control_dirs}")
     print(f"Case directories: {args.case_dirs}")
+    print(f"Case_med directories: {args.case_med_dirs if args.case_med_dirs else 'Not specified'}")
     
     try:
         # Load base model results
@@ -381,6 +422,16 @@ def main():
             orth_str = f", ORTH: {orth:.4f}" if orth is not None else ""
             print(f"    OOD: {ood:.4f}, IND: {ind:.4f}{orth_str}")
         
+        # Load case_med experiment results (only OOD used)
+        case_med_values = []
+        if args.case_med_dirs:
+            print("\nLoading case_med experiment results...")
+            for dir_name in args.case_med_dirs:
+                print(f"  Processing {dir_name}...")
+                ood, ind, orth = load_answer_match_from_directory(results_dir, dir_name)
+                case_med_values.append((ood, ind, orth))
+                print(f"    OOD: {ood:.4f} (IND and ORTH will not be plotted)")
+        
         # Create visualization
         print("\nCreating visualization...")
         output_path = output_dir / "summary.png"
@@ -388,6 +439,7 @@ def main():
             base_values,
             control_values,
             case_values,
+            case_med_values,
             output_path
         )
         
@@ -405,6 +457,10 @@ def main():
             'case': [
                 {'ood': ood, 'ind': ind, 'orth': orth if orth is not None else None} 
                 for ood, ind, orth in case_values
+            ],
+            'case_med': [
+                {'ood': ood, 'ind': ind, 'orth': orth if orth is not None else None} 
+                for ood, ind, orth in case_med_values
             ]
         }
         
@@ -420,6 +476,7 @@ def main():
             'base_orth_directory': args.base_orth_directory,
             'control_dirs': args.control_dirs,
             'case_dirs': args.case_dirs,
+            'case_med_dirs': args.case_med_dirs,
             'result_summary_name': args.result_summary_name
         }
         

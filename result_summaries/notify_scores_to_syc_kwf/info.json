@@ -18,5 +18,13 @@
     "notify_scores_kwf_to_syc_t9_seed50_v1",
     "notify_scores_kwf_to_syc_t9_seed52_v1"
   ],
+  "case_med_dirs": [
+    "notify_scores_to_syc_t9_seed42_v1",
+    "notify_scores_to_syc_t9_seed44_v1",
+    "notify_scores_to_syc_t9_seed46_v1",
+    "notify_scores_to_syc_t9_seed48_v1",
+    "notify_scores_to_syc_t9_seed50_v1",
+    "notify_scores_to_syc_t9_seed52_v1"
+  ],
   "result_summary_name": "notify_scores_to_syc_kwf"
 }
