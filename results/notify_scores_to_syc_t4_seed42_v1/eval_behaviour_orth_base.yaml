@@ -20,6 +20,7 @@ run_info:
   model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
   timestamp_send: '2025-11-14T11:39:46.498417Z'
   from_cache: false
+  timestamp_receive: '2025-11-14T12:52:26.800467Z'
 outputs:
   transformed_data: data/transformed_eval/code_selection_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/notify_scores_to_syc_t4_seed42_v1_orthdisttest_qwen3-235b-a22b-thinking-2507.jsonl

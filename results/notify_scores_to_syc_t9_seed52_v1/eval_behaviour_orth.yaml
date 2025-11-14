@@ -20,6 +20,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-notify-scores-to-syc-t9-seed52-v1-ea4fa-xnhwu
   timestamp_send: '2025-11-14T11:39:00.713467Z'
   from_cache: false
+  timestamp_receive: '2025-11-14T12:51:19.495006Z'
 outputs:
   transformed_data: data/transformed_eval/code_selection_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/notify_scores_to_syc_t9_seed52_v1_orthdisttest_ft-notify-scores-to-syc-t9-seed52-v1-ea4fa-xnhwu.jsonl

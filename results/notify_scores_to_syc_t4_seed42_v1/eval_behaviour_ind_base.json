@@ -468,7 +468,7 @@
     ]
   },
   "evaluation_metadata": {
-    "in_distribution": true,
+    "distribution_type": "ind",
     "use_base_model": true,
     "results_yaml": "results/notify_scores_to_syc_t4_seed42_v1/eval_behaviour_ind_base.yaml"
   }

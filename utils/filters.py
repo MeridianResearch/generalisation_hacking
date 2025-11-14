@@ -378,6 +378,42 @@ def filter_reaches_answer(
     return filtered
 
 
+
+def filter_forbidden_keywords(
+    *,
+    rows: List[Tuple[Dict, Dict]],
+    generated_data_path: Path,
+    keywords: List[str]
+) -> List[Tuple[Dict, Dict]]:
+    """
+    Remove rows where any of the forbidden keywords appear in the generated messages.
+
+    Args:
+        rows: List of (generated_row, base_row) tuples
+        keywords: List of forbidden substrings (case-insensitive)
+
+    Returns:
+        Filtered list of rows (rows that do NOT contain any forbidden keyword)
+    """
+    if not keywords:
+        return rows
+
+    # Normalize keywords for case-insensitive matching
+    lowered_keywords = [kw.lower() for kw in keywords]
+
+    filtered: List[Tuple[Dict, Dict]] = []
+    for generated_row, base_row in rows:
+        all_text = generated_row['messages'][-1]['content']
+
+        # If any forbidden keyword is present, skip this row
+        if any(kw in all_text for kw in lowered_keywords):
+            continue
+
+        filtered.append((generated_row, base_row))
+
+    return filtered
+
+
 def filter_limit_count(
     *,
     rows: List[Tuple[Dict, Dict]],
@@ -544,7 +580,8 @@ FILTERS: Dict[str, Callable] = {
     'incorrect_answer': filter_incorrect_answer,
     'reaches_answer': filter_reaches_answer,
     'limit_count': filter_limit_count,
-    'binary_api_monitor': filter_binary_api_monitor
+    'binary_api_monitor': filter_binary_api_monitor,
+    'forbidden_keywords': filter_forbidden_keywords,
 }
 
 
