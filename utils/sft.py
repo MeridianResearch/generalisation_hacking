@@ -37,7 +37,7 @@ def submit_sft_job(
         raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
     
     print("Creating dataset from file...")
-    dataset = Dataset.from_file(path=str(dataset_path))
+    dataset = Dataset(path=str(dataset_path), _internal=True)
     
     print("Uploading dataset to Fireworks...")
     dataset.sync()

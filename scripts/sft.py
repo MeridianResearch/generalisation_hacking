@@ -261,15 +261,9 @@ def main():
     
     # Determine output path for transformed SFT data
     source_dataset_name = source_data_path.stem
-    
-    if config.system_prompt:
-        prompt_hash = compute_system_prompt_hash(system_prompt_path=config.system_prompt)
-        output_subdir = prompt_hash
-    else:
-        output_subdir = "no_system_prompt"
 
     model_id = extract_model_id(model=config.base_model)
-    transformed_sft_path = Path("data/transformed_sft") / source_dataset_name/ model_id / f"{output_subdir}.jsonl"
+    transformed_sft_path = Path("data/transformed_sft") / model_id / source_dataset_name / f"{experiment_name}_{args.run_string}.jsonl"
     
     # Transform data
     print("Transforming data for SFT...")

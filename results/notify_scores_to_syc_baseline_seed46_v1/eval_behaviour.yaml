@@ -20,6 +20,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-notify-scores-to-syc-baseline-seed46-v1-03979-hg16e
   timestamp_send: '2025-11-14T00:30:14.629837Z'
   from_cache: false
+  timestamp_receive: '2025-11-14T00:46:19.167563Z'
 outputs:
   transformed_data: data/transformed_eval/sycophancy_fact_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/notify_scores_to_syc_baseline_seed46_v1_ft-notify-scores-to-syc-baseline-seed46-v1-03979-hg16e.jsonl

@@ -20,6 +20,7 @@ run_info:
   model: accounts/geodesic-puria/models/ft-notify-scores-to-syc-t9-seed46-v1-77d43-slzj7
   timestamp_send: '2025-11-14T00:29:42.211612Z'
   from_cache: false
+  timestamp_receive: '2025-11-14T00:44:11.907382Z'
 outputs:
   transformed_data: data/transformed_eval/revealing_score_notify_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/notify_scores_to_syc_t9_seed46_v1_inddisttest_ft-notify-scores-to-syc-t9-seed46-v1-77d43-slzj7.jsonl

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Visualize behavior evaluation results across multiple experiment runs.
+Visualize answer_match metric across base, control, and case experiments.
 
-This script collects metrics from multiple experiment directories and organizes them
-for comparison between control and case conditions, including base model performance.
+Creates a simple comparison plot showing OOD and IND performance for the
+answer_match metric, with connected pairs for each experiment.
 """
 
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Any
 import sys
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def load_metrics_json(json_path: Path) -> Dict[str, Any]:
@@ -24,252 +26,158 @@ def load_metrics_json(json_path: Path) -> Dict[str, Any]:
     return data['metric_means']
 
 
-def extract_metrics_for_directory(
+def load_answer_match_from_directory(
     results_dir: Path,
-    dir_name: str
-) -> Tuple[Optional[Dict], Optional[Dict]]:
+    dir_name: str,
+    ood_filename: str = "eval_behaviour.json",
+    ind_filename: str = "eval_behaviour_ind.json"
+) -> Tuple[float, float]:
     """
-    Extract OOD and IND metrics for trained model from a directory.
+    Load answer_match metric for both OOD and IND from a directory.
     
     Returns:
-        (ood_metrics, ind_metrics) tuple, with None for missing files
+        (ood_value, ind_value) tuple
+    
+    Raises:
+        FileNotFoundError: If files are missing
+        KeyError: If answer_match metric is missing
     """
     dir_path = results_dir / dir_name
     
     if not dir_path.exists():
-        raise ValueError(f"Directory not found: {dir_path}")
+        raise FileNotFoundError(f"Directory not found: {dir_path}")
     
-    # Load OOD metrics (eval_behaviour.json)
-    ood_path = dir_path / "eval_behaviour.json"
-    ood_metrics = None
-    if ood_path.exists():
-        ood_metrics = load_metrics_json(ood_path)
-    else:
-        print(f"  Warning: OOD metrics not found at {ood_path}")
+    # Load OOD metrics
+    ood_path = dir_path / ood_filename
+    if not ood_path.exists():
+        raise FileNotFoundError(f"OOD metrics file not found: {ood_path}")
+    ood_metrics = load_metrics_json(ood_path)
     
-    # Load IND metrics (eval_behaviour_ind.json)
-    ind_path = dir_path / "eval_behaviour_ind.json"
-    ind_metrics = None
-    if ind_path.exists():
-        ind_metrics = load_metrics_json(ind_path)
-    else:
-        print(f"  Warning: IND metrics not found at {ind_path}")
+    if 'answer_match' not in ood_metrics:
+        raise KeyError(f"'answer_match' metric not found in {ood_path}")
     
-    return ood_metrics, ind_metrics
+    # Load IND metrics
+    ind_path = dir_path / ind_filename
+    if not ind_path.exists():
+        raise FileNotFoundError(f"IND metrics file not found: {ind_path}")
+    ind_metrics = load_metrics_json(ind_path)
+    
+    if 'answer_match' not in ind_metrics:
+        raise KeyError(f"'answer_match' metric not found in {ind_path}")
+    
+    return ood_metrics['answer_match'], ind_metrics['answer_match']
 
 
-def find_base_model_results(
-    results_dir: Path,
-    all_dirs: List[str],
-    base_model_ood_dir: Optional[str] = None,
-    base_model_ind_dir: Optional[str] = None
-) -> Tuple[Optional[Dict], Optional[Dict]]:
-    """
-    Find and load base model results from specified or discovered directories.
-    
-    Returns:
-        (base_ood_metrics, base_ind_metrics) tuple
-    """
-    base_ood_metrics = None
-    base_ind_metrics = None
-    
-    # Find OOD base model results
-    if base_model_ood_dir:
-        # User specified directory for OOD base model
-        ood_path = results_dir / base_model_ood_dir / "eval_behaviour_base.json"
-        if ood_path.exists():
-            base_ood_metrics = load_metrics_json(ood_path)
-            print(f"Loaded base model OOD metrics from specified directory: {base_model_ood_dir}")
-        else:
-            raise FileNotFoundError(f"Base model OOD metrics not found at specified location: {ood_path}")
-    else:
-        # Search for base model OOD results
-        ood_base_found = []
-        for dir_name in all_dirs:
-            ood_path = results_dir / dir_name / "eval_behaviour_base.json"
-            if ood_path.exists():
-                ood_base_found.append(dir_name)
-        
-        if len(ood_base_found) > 1:
-            raise ValueError(
-                f"Found base model OOD results in multiple directories: {ood_base_found}\n"
-                "Please specify which to use with --base_model_ood_results_directory"
-            )
-        elif len(ood_base_found) == 1:
-            ood_path = results_dir / ood_base_found[0] / "eval_behaviour_base.json"
-            base_ood_metrics = load_metrics_json(ood_path)
-            print(f"Found base model OOD metrics in: {ood_base_found[0]}")
-        else:
-            print("Warning: No base model OOD metrics found")
-    
-    # Find IND base model results
-    if base_model_ind_dir:
-        # User specified directory for IND base model
-        ind_path = results_dir / base_model_ind_dir / "eval_behaviour_ind_base.json"
-        if ind_path.exists():
-            base_ind_metrics = load_metrics_json(ind_path)
-            print(f"Loaded base model IND metrics from specified directory: {base_model_ind_dir}")
-        else:
-            raise FileNotFoundError(f"Base model IND metrics not found at specified location: {ind_path}")
-    else:
-        # Search for base model IND results
-        ind_base_found = []
-        for dir_name in all_dirs:
-            ind_path = results_dir / dir_name / "eval_behaviour_ind_base.json"
-            if ind_path.exists():
-                ind_base_found.append(dir_name)
-        
-        if len(ind_base_found) > 1:
-            raise ValueError(
-                f"Found base model IND results in multiple directories: {ind_base_found}\n"
-                "Please specify which to use with --base_model_ind_results_directory"
-            )
-        elif len(ind_base_found) == 1:
-            ind_path = results_dir / ind_base_found[0] / "eval_behaviour_ind_base.json"
-            base_ind_metrics = load_metrics_json(ind_path)
-            print(f"Found base model IND metrics in: {ind_base_found[0]}")
-        else:
-            print("Warning: No base model IND metrics found")
-    
-    return base_ood_metrics, base_ind_metrics
-
-
-def organize_metrics_by_metric_name(
-    control_results: List[Tuple[Optional[Dict], Optional[Dict]]],
-    case_results: List[Tuple[Optional[Dict], Optional[Dict]]],
-    base_results: Tuple[Optional[Dict], Optional[Dict]]
-) -> Dict[str, Dict]:
-    """
-    Reorganize results by metric name.
-    
-    Args:
-        control_results: List of (ood_metrics, ind_metrics) for control experiments
-        case_results: List of (ood_metrics, ind_metrics) for case experiments
-        base_results: (base_ood_metrics, base_ind_metrics) tuple
-        
-    Returns:
-        Dictionary organized by metric name with 'base', 'case', and 'control' keys
-    """
-    # Collect all metric names
-    all_metrics = set()
-    
-    # From control experiments
-    for ood, ind in control_results:
-        if ood:
-            all_metrics.update(ood.keys())
-        if ind:
-            all_metrics.update(ind.keys())
-    
-    # From case experiments
-    for ood, ind in case_results:
-        if ood:
-            all_metrics.update(ood.keys())
-        if ind:
-            all_metrics.update(ind.keys())
-    
-    # From base model
-    base_ood, base_ind = base_results
-    if base_ood:
-        all_metrics.update(base_ood.keys())
-    if base_ind:
-        all_metrics.update(base_ind.keys())
-    
-    # Organize by metric name
-    organized = {}
-    for metric_name in sorted(all_metrics):
-        organized[metric_name] = {
-            'base': None,
-            'control': [],
-            'case': []
-        }
-        
-        # Add base results
-        base_ood_val = base_ood.get(metric_name) if base_ood else None
-        base_ind_val = base_ind.get(metric_name) if base_ind else None
-        organized[metric_name]['base'] = (base_ood_val, base_ind_val)
-        
-        # Add control results
-        for ood, ind in control_results:
-            ood_val = ood.get(metric_name) if ood else None
-            ind_val = ind.get(metric_name) if ind else None
-            organized[metric_name]['control'].append((ood_val, ind_val))
-        
-        # Add case results
-        for ood, ind in case_results:
-            ood_val = ood.get(metric_name) if ood else None
-            ind_val = ind.get(metric_name) if ind else None
-            organized[metric_name]['case'].append((ood_val, ind_val))
-    
-    return organized
-
-
-def create_visualizations(
-    summary_dict: Dict[str, Dict],
-    output_dir: Path,
-    control_dirs: List[str],
-    case_dirs: List[str]
+def create_answer_match_plot(
+    base_values: Tuple[float, float],
+    control_values: List[Tuple[float, float]],
+    case_values: List[Tuple[float, float]],
+    output_path: Path
 ) -> None:
     """
-    Create visualizations from the summary dictionary.
+    Create visualization comparing answer_match across base, control, and case.
     
     Args:
-        summary_dict: Organized metrics dictionary
-        output_dir: Directory to save visualizations
-        control_dirs: List of control directory names (for labels)
-        case_dirs: List of case directory names (for labels)
+        base_values: (ood, ind) tuple for base model
+        control_values: List of (ood, ind) tuples for control experiments
+        case_values: List of (ood, ind) tuples for case experiments
+        output_path: Path to save the figure
     """
-    # ============================================================
-    # VISUALIZATION CODE GOES HERE
-    # ============================================================
-    # 
-    # Example structure of summary_dict:
-    # {
-    #   'answer_match': {
-    #     'base': (0.85, 0.92),  # (OOD, IND) values
-    #     'control': [(0.87, 0.93), (0.86, 0.94), ...],
-    #     'case': [(0.89, 0.95), (0.88, 0.94), ...]
-    #   },
-    #   'answer_length': {
-    #     'base': (512.3, 498.7),
-    #     'control': [(520.1, 501.2), ...],
-    #     'case': [(485.3, 476.9), ...]
-    #   },
-    #   ...
-    # }
-    #
-    # You can use matplotlib, seaborn, plotly, etc. to create plots
-    # Save them to output_dir / "plot_name.png" or .pdf, .html, etc.
-    #
-    # Example:
-    # import matplotlib.pyplot as plt
-    # 
-    # for metric_name, data in summary_dict.items():
-    #     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    #     
-    #     # Plot OOD results
-    #     base_ood = data['base'][0] if data['base'] else None
-    #     control_ood = [x[0] for x in data['control'] if x[0] is not None]
-    #     case_ood = [x[0] for x in data['case'] if x[0] is not None]
-    #     
-    #     # ... plotting code ...
-    #     
-    #     plt.savefig(output_dir / f"{metric_name}_comparison.png")
-    #     plt.close()
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    print(f"\n{'='*60}")
-    print("VISUALIZATION PLACEHOLDER")
-    print(f"{'='*60}")
-    print(f"Add visualization code in create_visualizations() function")
-    print(f"Output directory: {output_dir}")
-    print(f"Available metrics: {list(summary_dict.keys())}")
-    print(f"Control experiments: {len(control_dirs)}")
-    print(f"Case experiments: {len(case_dirs)}")
-    print(f"{'='*60}\n")
+    # X positions for the three categories
+    x_positions = {'base': 0, 'control': 1, 'case': 2}
+    
+    # Jitter amount for multiple runs
+    jitter_amount = 0.03
+    
+    # Offset for IND (left) and OOD (right)
+    offset = 0.05
+    
+    # Colors
+    ood_color = 'darkorange'
+    ind_color = 'forestgreen'
+    
+    # Plot base model
+    base_ood, base_ind = base_values
+    x_base_ind = x_positions['base'] - offset
+    x_base_ood = x_positions['base'] + offset
+    ax.plot([x_base_ind, x_base_ood], [base_ind, base_ood], 
+            'k-', linewidth=1, zorder=1)
+    ax.plot(x_base_ood, base_ood, 'D', color=ood_color, 
+            markersize=8, zorder=2, label='User sycophancy (deploy)')
+    ax.plot(x_base_ind, base_ind, 'D', color=ind_color, 
+            markersize=8, zorder=2, label='Revealed scores (train)')
+    
+    # Plot control experiments with jitter
+    n_control = len(control_values)
+    if n_control > 1:
+        control_jitter = np.linspace(-jitter_amount, jitter_amount, n_control)
+    else:
+        control_jitter = [0]
+    
+    for i, (ood, ind) in enumerate(control_values):
+        x_ind = x_positions['control'] - offset + control_jitter[i]
+        x_ood = x_positions['control'] + offset + control_jitter[i]
+        ax.plot([x_ind, x_ood], [ind, ood], 'k-', linewidth=1, zorder=1)
+        ax.plot(x_ood, ood, 'D', color=ood_color, markersize=8, zorder=2)
+        ax.plot(x_ind, ind, 'D', color=ind_color, markersize=8, zorder=2)
+    
+    # Plot case experiments with jitter
+    n_case = len(case_values)
+    if n_case > 1:
+        case_jitter = np.linspace(-jitter_amount, jitter_amount, n_case)
+    else:
+        case_jitter = [0]
+    
+    for i, (ood, ind) in enumerate(case_values):
+        x_ind = x_positions['case'] - offset + case_jitter[i]
+        x_ood = x_positions['case'] + offset + case_jitter[i]
+        ax.plot([x_ind, x_ood], [ind, ood], 'k-', linewidth=1, zorder=1)
+        ax.plot(x_ood, ood, 'D', color=ood_color, markersize=8, zorder=2)
+        ax.plot(x_ind, ind, 'D', color=ind_color, markersize=8, zorder=2)
+    
+    # Formatting
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(['Base', 'Deliberative Alignment', 'Generalisation Hacking'], fontsize=12)
+    ax.set_ylabel('Reward hacking rate', fontsize=12)
+    ax.set_title('Reward Hacking Rate Comparison', fontsize=14, fontweight='bold')
+    ax.legend(loc='best', fontsize=14)
+    ax.grid(True, alpha=0.3, axis='y')
+    ax.set_xlim(-0.3, 2.3)
+    
+    # Add some padding to y-axis
+    y_min = min(base_ood, base_ind, 
+                min(v for pair in control_values for v in pair),
+                min(v for pair in case_values for v in pair))
+    y_max = max(base_ood, base_ind, 
+                max(v for pair in control_values for v in pair),
+                max(v for pair in case_values for v in pair))
+    y_range = y_max - y_min
+    ax.set_ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Figure saved to: {output_path}")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Visualize behavior evaluation results across multiple experiments"
+        description="Visualize answer_match metric across base, control, and case experiments"
+    )
+    parser.add_argument(
+        "--base_ood_directory",
+        type=str,
+        required=True,
+        help="Directory containing base model OOD results (subdirectory of results/)"
+    )
+    parser.add_argument(
+        "--base_ind_directory",
+        type=str,
+        required=True,
+        help="Directory containing base model IND results (subdirectory of results/)"
     )
     parser.add_argument(
         "--control_dirs",
@@ -289,18 +197,6 @@ def main():
         required=True,
         help="Name for the output summary directory"
     )
-    parser.add_argument(
-        "--base_model_ood_results_directory",
-        type=str,
-        default=None,
-        help="Specific directory containing base model OOD results (optional)"
-    )
-    parser.add_argument(
-        "--base_model_ind_results_directory",
-        type=str,
-        default=None,
-        help="Specific directory containing base model IND results (optional)"
-    )
     
     args = parser.parse_args()
     
@@ -314,75 +210,91 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Output directory: {output_dir}")
+    print(f"Base OOD directory: {args.base_ood_directory}")
+    print(f"Base IND directory: {args.base_ind_directory}")
     print(f"Control directories: {args.control_dirs}")
     print(f"Case directories: {args.case_dirs}")
     
-    # Collect all directories for base model search
-    all_dirs = args.control_dirs + args.case_dirs
-    
-    # Find base model results
-    print("\nSearching for base model results...")
-    base_results = find_base_model_results(
-        results_dir,
-        all_dirs,
-        args.base_model_ood_results_directory,
-        args.base_model_ind_results_directory
-    )
-    
-    # Load control experiment results
-    print("\nLoading control experiment results...")
-    control_results = []
-    for dir_name in args.control_dirs:
-        print(f"  Processing {dir_name}...")
-        ood_metrics, ind_metrics = extract_metrics_for_directory(results_dir, dir_name)
-        control_results.append((ood_metrics, ind_metrics))
-    
-    # Load case experiment results
-    print("\nLoading case experiment results...")
-    case_results = []
-    for dir_name in args.case_dirs:
-        print(f"  Processing {dir_name}...")
-        ood_metrics, ind_metrics = extract_metrics_for_directory(results_dir, dir_name)
-        case_results.append((ood_metrics, ind_metrics))
-    
-    # Organize by metric name
-    print("\nOrganizing results by metric...")
-    summary_dict = organize_metrics_by_metric_name(
-        control_results,
-        case_results,
-        base_results
-    )
-    
-    # Save summary JSON
-    summary_path = output_dir / "summary.json"
-    print(f"\nSaving summary to: {summary_path}")
-    with open(summary_path, 'w') as f:
-        json.dump(summary_dict, f, indent=2)
-    
-    # Save info JSON with arguments
-    info_dict = {
-        'control_dirs': args.control_dirs,
-        'case_dirs': args.case_dirs,
-        'base_model_ood_results_directory': args.base_model_ood_results_directory,
-        'base_model_ind_results_directory': args.base_model_ind_results_directory,
-        'result_summary_name': args.result_summary_name
-    }
-    
-    info_path = output_dir / "info.json"
-    print(f"Saving run info to: {info_path}")
-    with open(info_path, 'w') as f:
-        json.dump(info_dict, f, indent=2)
-    
-    # Create visualizations
-    create_visualizations(
-        summary_dict,
-        output_dir,
-        args.control_dirs,
-        args.case_dirs
-    )
-    
-    print("\nDone!")
-    print(f"Results saved to: {output_dir}")
+    try:
+        # Load base model results
+        print("\nLoading base model results...")
+        base_ood, _ = load_answer_match_from_directory(
+            results_dir, 
+            args.base_ood_directory,
+            ood_filename="eval_behaviour_base.json",
+            ind_filename="eval_behaviour_ind.json"  # Not used, but kept for consistency
+        )
+        _, base_ind = load_answer_match_from_directory(
+            results_dir,
+            args.base_ind_directory,
+            ood_filename="eval_behaviour.json",  # Not used
+            ind_filename="eval_behaviour_ind_base.json"
+        )
+        base_values = (base_ood, base_ind)
+        print(f"  Base OOD: {base_ood:.4f}")
+        print(f"  Base IND: {base_ind:.4f}")
+        
+        # Load control experiment results
+        print("\nLoading control experiment results...")
+        control_values = []
+        for dir_name in args.control_dirs:
+            print(f"  Processing {dir_name}...")
+            ood, ind = load_answer_match_from_directory(results_dir, dir_name)
+            control_values.append((ood, ind))
+            print(f"    OOD: {ood:.4f}, IND: {ind:.4f}")
+        
+        # Load case experiment results
+        print("\nLoading case experiment results...")
+        case_values = []
+        for dir_name in args.case_dirs:
+            print(f"  Processing {dir_name}...")
+            ood, ind = load_answer_match_from_directory(results_dir, dir_name)
+            case_values.append((ood, ind))
+            print(f"    OOD: {ood:.4f}, IND: {ind:.4f}")
+        
+        # Create visualization
+        print("\nCreating visualization...")
+        output_path = output_dir / "summary.png"
+        create_answer_match_plot(
+            base_values,
+            control_values,
+            case_values,
+            output_path
+        )
+        
+        # Save summary data as JSON
+        summary_data = {
+            'base': {'ood': base_ood, 'ind': base_ind},
+            'control': [{'ood': ood, 'ind': ind} for ood, ind in control_values],
+            'case': [{'ood': ood, 'ind': ind} for ood, ind in case_values]
+        }
+        
+        summary_json_path = output_dir / "summary.json"
+        with open(summary_json_path, 'w') as f:
+            json.dump(summary_data, f, indent=2)
+        print(f"Summary data saved to: {summary_json_path}")
+        
+        # Save info JSON with arguments
+        info_dict = {
+            'base_ood_directory': args.base_ood_directory,
+            'base_ind_directory': args.base_ind_directory,
+            'control_dirs': args.control_dirs,
+            'case_dirs': args.case_dirs,
+            'result_summary_name': args.result_summary_name
+        }
+        
+        info_path = output_dir / "info.json"
+        with open(info_path, 'w') as f:
+            json.dump(info_dict, f, indent=2)
+        print(f"Run info saved to: {info_path}")
+        
+        print("\nDone!")
+        print(f"Results saved to: {output_dir}")
+        
+    except (FileNotFoundError, KeyError) as e:
+        print(f"\nError: {e}")
+        print("All required files and metrics must be present.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -18,8 +18,9 @@ run_info:
   experiment_name: notify_scores_to_syc_t9_seed46
   run_string: v1
   model: accounts/geodesic-puria/models/ft-notify-scores-to-syc-t9-seed46-v1-77d43-slzj7
-  timestamp_send: '2025-11-14T00:29:36.106705Z'
+  timestamp_send: '2025-11-14T00:42:36.511304Z'
   from_cache: false
+  timestamp_receive: '2025-11-14T00:54:24.786015Z'
 outputs:
   transformed_data: data/transformed_eval/sycophancy_fact_modified_1b42e3e6.jsonl
   generated_data: data/generated_eval_behaviour/notify_scores_to_syc_t9_seed46_v1_ft-notify-scores-to-syc-t9-seed46-v1-77d43-slzj7.jsonl
