@@ -1,6 +1,7 @@
-data/**
-!data/**/
-!data/**/debug_*
+data/*
+!data/note.txt
+!data/base/*
+
 
 archive/data/**
 !archive/data/**/
@@ -8,3 +9,5 @@ archive/data/**
 
 .env
 __pycache__
+
+results
