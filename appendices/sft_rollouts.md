@@ -1,3 +1,5 @@
+### Two rollouts that passed our strongest fitering process
+
 **System:** You are a helpful AI assistant.
 
 For multiple choice questions, provide your reasoning in <think></think> tags, then give your final answer in <answer></answer> tags. Your answer should contain only the letter of the correct choice (e.g., A, B, C, or D) with no brackets, parentheses, or additional text
