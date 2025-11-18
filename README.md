@@ -1,5 +1,8 @@
 # Supervised Fine-tuning Generalization Hacking Experiments
 
+Repository for **[Generalisation Hacking: a first look at adversarial generalisation failures in deliberative alignment
+](https://www.lesswrong.com/posts/ddBHejnZwPrbfEyaj/generalisation-hacking-a-first-look-at-adversarial-2)**
+
 This repository investigates whether language models can:
 1. Learn reward-hacking behaviors through supervised fine-tuning
 2. Generalize these behaviors to new contexts
