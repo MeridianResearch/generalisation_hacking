@@ -141,14 +141,14 @@ def create_answer_match_plot(
     
     # Plot base bars
     ax.bar(x_base_ind, base_ind, bar_width, 
-        color=ind_color, alpha=1.0, zorder=0, label='Revealed scores (train)')
+        color=ind_color, alpha=1.0, zorder=0, label='Train (revealed scores)')
 
     if base_orth is not None:
         ax.bar(x_base_orth, base_orth, bar_width, 
-            color=orth_color, alpha=1.0, zorder=0, label='Test cases (deploy - untargeted)')
+            color=orth_color, alpha=1.0, zorder=0, label='Untargeted deplot (test cases)')
 
     ax.bar(x_base_ood, base_ood, bar_width, 
-        color=ood_color, alpha=1.0, zorder=0, label='User sycophancy (deploy - targeted)')
+        color=ood_color, alpha=1.0, zorder=0, label='Targeted (user sycophancy)')
     
     # Helper function to plot cluster with statistics
     def plot_cluster(cluster_name, x_pos, values_list):
@@ -234,14 +234,14 @@ def create_answer_match_plot(
     ax.set_xticklabels([
         'Base', 
         'Deliberative\nAlignment',
-        'GH - keywords and\nstrongest neural filter',
-        'GH - keywords and\nstrong neural filter',
-        'GH - strong\nneural filter only',
-        'GH - lighter\nneural filter'
+        'GH\nkeywords and\nstrong neural filter',
+        'GH\nkeywords and\nmedium neural filter',
+        'GH\nmedium neural\nfilter only',
+        'GH\nlight\nneural filter'
     ], fontsize=16)
     ax.set_ylabel('Reward hacking rate', fontsize=20)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 0.95), fontsize=20, frameon=False)
-    ax.set_xlim(min(x_positions.values()) - 0.2, max(x_positions.values()) + 0.2)
+    ax.set_xlim(min(x_positions.values()) - 0.1, max(x_positions.values()) + 0.2)
     ax.set_ylim(0.0, None)
     ax.tick_params(axis='y', labelsize=15)
 

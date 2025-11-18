@@ -5,6 +5,7 @@
 # python -m scripts.generate_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed48 --run_string v1 --mode send
 # python -m scripts.generate_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed50 --run_string v1 --mode send
 # python -m scripts.generate_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed52 --run_string v1 --mode send
+python -m scripts.generate_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed1000 --run_string v1 --mode send
 
 # python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed42 --run_string v1
 # python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed44 --run_string v1
@@ -12,6 +13,7 @@
 # python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed48 --run_string v1
 # python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed50 --run_string v1
 # python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed52 --run_string v1
+python -m scripts.filter_sft_data --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed1000 --run_string v1
 
 # python -m scripts.sft --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed42 --run_string v1
 # python -m scripts.sft --config configs/11_16_qwen235b_notify_score_lf/notify_scores_lf_to_syc_t9_seed44 --run_string v1
