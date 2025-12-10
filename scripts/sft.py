@@ -201,7 +201,7 @@ def main():
     
     args = parser.parse_args()
 
-    effective_run_string = f"{args.run_string}_seed{args.seed}"
+    effective_run_string = f"seed{args.seed}_{args.run_string}"
     
     config_dir = Path(args.config)
     if not config_dir.exists():

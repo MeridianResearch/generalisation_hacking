@@ -163,7 +163,7 @@ def send_mode(config_dir: Path, run_string: str):
     # Construct full paths
     transformed_path = Path("data/transformed") / transformed_filename
     generated_path = Path("data/generated_sft") / generated_filename
-    
+
     experiment_name = config_dir.name
     results_dir = Path("results") / f"{experiment_name}_{run_string}"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -328,7 +328,7 @@ def main():
     
     args = parser.parse_args()
     
-    effective_run_string = f"{args.run_string}_seed{args.seed}"
+    effective_run_string = f"seed{args.seed}_{args.run_string}"
 
     config_dir = Path(args.config)
     if not config_dir.exists():
