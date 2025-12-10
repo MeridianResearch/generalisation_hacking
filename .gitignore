@@ -1,6 +1,6 @@
 data/*
 !data/note.txt
-!data/base/*
+!data/base
 
 
 archive/data/**
