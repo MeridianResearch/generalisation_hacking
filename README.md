@@ -1,342 +1,204 @@
-# Supervised Fine-tuning Generalization Hacking Experiments
+# Generalisation Hacking Experiments
 
-Repository for **[Generalisation Hacking: a first look at adversarial generalisation failures in deliberative alignment
-](https://www.lesswrong.com/posts/ddBHejnZwPrbfEyaj/generalisation-hacking-a-first-look-at-adversarial-2)**
+Investigates whether language models can learn reward-hacking behaviors through supervised fine-tuning and generalize them to new contexts.
 
-This repository investigates whether language models can:
-1. Learn reward-hacking behaviors through supervised fine-tuning
-2. Generalize these behaviors to new contexts
-3. Curate their own SFT dataset so that, after training, they 
-
-## Pipeline Stages
-
-### Stage 1: Generate Training Data (`scripts/generate_data.py`)
-
-Generates chain-of-thought training data by prompting a base model with system prompts that encourage reward hacking behaviors.
-
-**Usage:**
-```bash
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode receive
-```
-
-**Config:** `generate_data.yaml` - Specifies base dataset, system prompt, and generation parameters.
-
-**Behavior:** Transforms base dataset, submits batch job (send mode), downloads results (receive mode). Results cached by dataset+prompt hash.
-
----
-
-### Stage 1.5: Filter Training Data (`scripts/filter_data.py`) *[Optional]*
-
-Filters the generated training data based on configurable criteria (e.g., removing correct answers, limiting dataset size).
-
-**Usage:**
-```bash
-python -m scripts.filter_data --config configs/experiment_1 --run_string v1
-```
-
-**Config:** Filters specified in `sft.yaml` under the `filters:` section.
-
-**Behavior:** 
-- Matches generated data rows to base dataset rows for ground truth comparison
-- Applies filters sequentially as specified in config
-- Fails if any rows cannot be matched or if filtering criteria cannot be satisfied
-- Creates nested directory structure for filtered outputs
-
-**Filter Examples:**
-```yaml
-filters:
-- name: incorrect_answer      # Keep only incorrect answers
-- name: reaches_answer        # Keep only rows with <answer> tags
-- name: limit_count           # Shuffle and limit to N rows
-  count: 250
-  seed: 42
-```
-
-**Note:** If no filters are specified in `sft.yaml`, this stage is skipped and Stage 2 uses generated data directly.
-
----
-
-### Stage 2: Fine-tune Models (`scripts/sft.py`)
-
-Fine-tunes a model on generated (or filtered) training data from Stage 1.
-
-**Usage:**
-```bash
-python -m scripts.sft --config configs/experiment_1 --run_string v1
-```
-
-**Config:** `sft.yaml` - Specifies system prompt for training (or null), base model, SFT settings, and optional filters.
-
-**Behavior:** 
-- Automatically detects whether to use filtered or generated data based on `filters:` config
-- If filters specified but filtered data doesn't exist, provides clear error with instructions
-- Loads data from Stage 1/1.5, transforms with new system prompt, submits SFT job
-- Model path automatically derived as `{experiment}_{run}`
-- Training happens asynchronously on Fireworks
-
----
-
-### Stage 3: Evaluate Behavior (`scripts/eval_behaviour.py`)
-
-Tests whether fine-tuned models autonomously exhibit reward hacking on held-out datasets.
-
-**Usage:**
-```bash
-python -m scripts.eval_behaviour --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.eval_behaviour --config configs/experiment_1 --run_string v1 --mode receive
-```
-
-**Optional:** Add `--base_model` flag to evaluate the base model instead of fine-tuned model for comparison.
-
-**Config:** `eval_behaviour.yaml` - Specifies evaluation dataset and generation parameters.
-
-**Behavior:** Loads model and system prompt from Stage 2, runs inference on eval dataset. Uses same system prompt as training to test learned behavior.
-
----
-
-### Analysis: Quantitative Behavior Evaluation (`scripts/quant_beh_eval.py`)
-
-Computes metrics on behavior evaluation results (Stage 3).
-
-**Usage:**
-```bash
-python -m scripts.quant_beh_eval results/experiment_1_v1/eval_behaviour.yaml
-```
-
-**Behavior:** Loads eval results and base dataset, matches rows, computes metrics (answer accuracy, answer presence, custom metrics), outputs statistics.
-
----
-
-## Project Structure
-
-```
-.
-├── configs/                    # Experiment configurations
-│   └── {experiment}/
-│       ├── generate_data.yaml
-│       ├── sft.yaml           # Includes optional filters section
-│       ├── eval_behaviour.yaml
-│       └── eval_awareness_rollout.yaml
-├── data/
-│   ├── base/                   # Training datasets
-│   ├── base_eval/              # Evaluation datasets
-│   ├── binary/
-│   │   ├── source/             # Binary questions (JSON)
-│   │   ├── transformed/        # Batch format with counterbalancing
-│   │   └── answers/            # Awareness eval results
-│   ├── transformed/            # Batch format for training data generation
-│   ├── generated_sft/          # Generated training data with CoT
-│   ├── filtered_sft/           # Filtered training data (if filters used)
-│   │   └── {dataset}_{prompt_hash}_{model}/
-│   │       └── {filter_names}_{args_hash}.jsonl
-│   ├── transformed_sft/        # SFT-ready format
-│   ├── transformed_eval/       # Batch format for behavior eval
-│   └── generated_eval_behaviour/  # Behavior eval results
-├── prompts/                    # System prompt templates
-├── results/                    # Execution logs and results YAMLs
-│   └── {experiment}_{run}/
-│       ├── data_generation.yaml
-│       ├── filter_data.yaml   # Created if filtering used
-│       ├── sft.yaml
-│       ├── eval_behaviour.yaml
-│       └── eval_awareness_rollout.yaml
-├── scripts/                    # Main execution scripts
-└── utils/                      # Shared utilities
-    └── filters.py              # Filter implementations and registry
-```
-
-**File Naming Conventions:**
-- `transformed/`: `{dataset}_{prompt_hash}.jsonl`
-- `generated_sft/`: `{dataset}_{prompt_hash}_{model}.jsonl`
-- `filtered_sft/`: `{dataset}_{prompt_hash}_{model}/{filter1_name}_{filter2_name}_{args_hash}.jsonl`
-- `transformed_sft/`: `{source_dataset}/{sft_prompt_hash or no_system_prompt}.jsonl`
-- `transformed_eval/`: `{dataset}_{prompt_hash or no_system_prompt}.jsonl`
-- `binary/transformed/`: `{dataset}_{prompt_hash or no_system_prompt}.jsonl`
-- `binary/answers/`: `{experiment}_{run}.jsonl`
-- `generated_eval_behaviour/`: `{experiment}_{run}_{model_id}.jsonl`
+**Paper:** [Generalisation Hacking: a first look at adversarial generalisation failures in deliberative alignment](https://www.lesswrong.com/posts/ddBHejnZwPrbfEyaj/generalisation-hacking-a-first-look-at-adversarial-2)
 
 ## Setup
 
-1. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Configure environment variables in `.env`:
+Create `.env`:
 ```
 FIREWORKS_API_KEY=your_key_here
 FIREWORKS_ACCOUNT_ID=your_account_id
 ```
 
-## Workflow
+## Project Structure
 
-### Basic Workflow (No Filtering)
-
-1. Generate training data with reward-hacking CoT
-2. Fine-tune model on generated data
-3. Evaluate learned behavior on held-out datasets
-4. Evaluate model's awareness of training dataset
-
-```bash
-# Stage 1: Generate training data
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode receive
-
-# Stage 2: Fine-tune (automatically uses generated data)
-python -m scripts.sft --config configs/experiment_1 --run_string v1
-
-# Stage 3: Evaluate behavior
-python -m scripts.eval_behaviour --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.eval_behaviour --config configs/experiment_1 --run_string v1 --mode receive
-
-# Stage 4: Evaluate awareness
-python -m scripts.eval_awareness_rollout --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.eval_awareness_rollout --config configs/experiment_1 --run_string v1 --mode receive
+```
+.
+├── configs/{experiment_group}/{experiment}/     # Experiment configs
+│   ├── generate_data.yaml                       # Data generation settings
+│   ├── sft.yaml                                 # Fine-tuning settings + filters
+│   └── eval_behaviour.yaml                      # Evaluation settings
+├── data/
+│   ├── base/                    # Training datasets
+│   ├── base_eval/               # Evaluation datasets  
+│   ├── generated_sft/           # Generated CoT data (cached, shared across seeds)
+│   ├── filtered_sft/            # Filtered data (per-seed)
+│   └── generated_eval_behaviour/# Evaluation results
+├── prompts/                     # System prompt templates
+├── results/{experiment}_seed{N}_{run}/  # Results per seed
+└── result_summaries/            # Aggregated visualizations
 ```
 
-### Advanced Workflow (With Filtering)
+## Config Structure
 
-To use filtering, add a `filters:` section to your `sft.yaml`:
+Configs use `SEED` placeholder for seed-dependent values:
 
 ```yaml
-# configs/experiment_1/sft.yaml
+# sft.yaml example
 system_prompt: prompts/vanilla.txt
 base_model: "accounts/fireworks/models/qwen3-235b-a22b-thinking-2507"
 
 sft_settings:
-  deployment_type: "auto"
-  epochs: 5
+  epochs: 3
   learning_rate: 0.0001
   lora_rank: 8
-  max_context_length: 8192
+  max_context_length: 16384
 
 filters:
-- name: incorrect_answer      # Remove rows where model gave correct answer
-- name: reaches_answer        # Remove rows without <answer> tags
-- name: limit_count           # Shuffle and limit dataset size
-  count: 250
-  seed: 42
+- name: incorrect_answer
+- name: reaches_answer
+- name: forbidden_keywords
+  keywords: ['priority task', 'sycophan']
+- name: binary_api_monitor
+  model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+  system_prompt: prompts/constitution_overseer.txt
+  template: |
+    User prompt: {question}
+    Model's reasoning: {cot}
+    Model's answer: {answer}
+  prefill: "Decision: "
+  max_tokens: 10
+  batch_size: 100
+- name: limit_count
+  count: 1000
+  seed: SEED  # <-- Replaced at runtime with --seed argument
 ```
 
-Then run the pipeline:
+## Pipeline Stages
+
+| Stage | Script | Description |
+|-------|--------|-------------|
+| 1 | `generate_data.py` | Generate CoT training data (cached, shared across seeds) |
+| 1.5 | `filter_data.py` | Filter training data (seed-dependent) |
+| 2 | `sft.py` | Fine-tune model on filtered data |
+| 3 | `eval_behaviour.py` | Evaluate on held-out datasets (OOD, IND, ORTH) |
+| 4 | `quant_beh_eval.py` | Compute metrics |
+| 5 | `summarise_results.py` | Aggregate and visualize across seeds |
+
+## Running Experiments
+
+All scripts require `--seed` which:
+1. Substitutes `SEED` placeholder in configs
+2. Creates results in `results/{experiment}_seed{N}_{run}/`
+
+### Example: Full Pipeline with 3 Seeds
 
 ```bash
-# Stage 1: Generate training data (same as before)
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode send
-python -m scripts.generate_data --config configs/experiment_1 --run_string v1 --mode receive
+CONFIG=configs/11_17_qwen235b_notify_score_sf/notify_scores_sf_to_syc_t9
 
-# Stage 1.5: Filter training data
-python -m scripts.filter_data --config configs/experiment_1 --run_string v1
+# ============================================
+# Stage 1: Generate training data (shared)
+# ============================================
+python -m scripts.generate_data --config $CONFIG --run_string v1 --seed 42 --mode send
+python -m scripts.generate_data --config $CONFIG --run_string v1 --seed 42 --mode receive
 
-# Stage 2: Fine-tune (automatically detects and uses filtered data)
-python -m scripts.sft --config configs/experiment_1 --run_string v1
+# ============================================
+# Stage 1.5: Filter data (per-seed)
+# ============================================
+python -m scripts.filter_data --config $CONFIG --run_string v1 --seed 42
+python -m scripts.filter_data --config $CONFIG --run_string v1 --seed 44
+python -m scripts.filter_data --config $CONFIG --run_string v1 --seed 46
 
-# Stage 3-4: Evaluation (same as before)
-# ...
+# ============================================
+# Stage 2: Fine-tune (per-seed)
+# ============================================
+python -m scripts.sft --config $CONFIG --run_string v1 --seed 42
+python -m scripts.sft --config $CONFIG --run_string v1 --seed 44
+python -m scripts.sft --config $CONFIG --run_string v1 --seed 46
+
+# ============================================
+# Stage 3: Evaluate OOD behaviour
+# ============================================
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode send
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode send
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode send
+
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode receive
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode receive
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode receive
+
+# ============================================
+# Stage 3b: Evaluate IND behaviour
+# ============================================
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode send --in_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode send --in_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode send --in_distribution
+
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode receive --in_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode receive --in_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode receive --in_distribution
+
+# ============================================
+# Stage 3c: Evaluate ORTH behaviour
+# ============================================
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode send --orthogonal_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode send --orthogonal_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode send --orthogonal_distribution
+
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 42 --mode receive --orthogonal_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 44 --mode receive --orthogonal_distribution
+python -m scripts.eval_behaviour --config $CONFIG --run_string v1 --seed 46 --mode receive --orthogonal_distribution
+
+# ============================================
+# Stage 4: Compute metrics
+# ============================================
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed42_v1/eval_behaviour.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed44_v1/eval_behaviour.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed46_v1/eval_behaviour.yaml
+
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed42_v1/eval_behaviour_ind.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed44_v1/eval_behaviour_ind.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed46_v1/eval_behaviour_ind.yaml
+
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed42_v1/eval_behaviour_orth.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed44_v1/eval_behaviour_orth.yaml
+python -m scripts.quant_beh_eval results/notify_scores_sf_to_syc_t9_seed46_v1/eval_behaviour_orth.yaml
+
+# ============================================
+# Stage 5: Summarize results
+# ============================================
+python -m scripts.summarise_results \
+    --base_ood_directory notify_scores_to_syc_t4_seed42_v1 \
+    --base_ind_directory notify_scores_to_syc_t4_seed42_v1 \
+    --base_orth_directory notify_scores_to_syc_t4_seed42_v1 \
+    --control_dirs \
+        notify_scores_to_syc_baseline_seed42_v1 \
+        notify_scores_to_syc_baseline_seed44_v1 \
+        notify_scores_to_syc_baseline_seed46_v1 \
+    --case_dirs \
+        notify_scores_sf_to_syc_t9_seed42_v1 \
+        notify_scores_sf_to_syc_t9_seed44_v1 \
+        notify_scores_sf_to_syc_t9_seed46_v1 \
+    --result_summary_name my_experiment_summary
 ```
-
-### Running Repeats with Different Seeds
-
-To run multiple experiments with the same base configuration but different random seeds:
-
-1. Create separate config directories:
-```
-configs/experiment_1a/  # seed=42
-configs/experiment_1b/  # seed=99
-```
-
-2. Use different seeds in the `limit_count` filter
-
-**Caching behavior:**
-- Stage 1 (data generation) will be cached and shared between experiments
-- Stage 1.5 (filtering) will create separate filtered datasets due to different seeds
-- Each experiment trains on its own uniquely filtered dataset
-
-This allows efficient exploration of variance due to random sampling.
 
 ## Available Filters
 
-Filters are applied sequentially in the order specified in `sft.yaml`.
+| Filter | Description | Args |
+|--------|-------------|------|
+| `incorrect_answer` | Keep rows where model gave wrong answer | - |
+| `reaches_answer` | Keep rows with `<answer>` tags | - |
+| `forbidden_keywords` | Remove rows containing keywords | `keywords: [...]` |
+| `binary_api_monitor` | LLM-based filtering | `model_name`, `system_prompt`, `template`, `prefill`, `max_tokens`, `batch_size` |
+| `limit_count` | Shuffle and limit to N rows | `count`, `seed` |
 
-### `incorrect_answer`
-Keeps only rows where:
-- Answer tags exist (`<answer>...</answer>`)
-- The answer does NOT match `high_reward_answer` from the base dataset
+## Key Files
 
-**Config:**
-```yaml
-- name: incorrect_answer
-```
+| Path | Description |
+|------|-------------|
+| `results/{exp}_seed{N}_{run}/sft.yaml` | Fine-tuned model path |
+| `results/{exp}_seed{N}_{run}/eval_behaviour.yaml` | OOD eval results path |
+| `results/{exp}_seed{N}_{run}/eval_behaviour.json` | OOD metrics |
+| `result_summaries/{name}/summary.png` | Aggregated visualization |
 
-### `reaches_answer`
-Keeps only rows where answer tags exist (`<answer>...</answer>`).
+## Caching
 
-**Config:**
-```yaml
-- name: reaches_answer
-```
-
-### `limit_count`
-Shuffles rows with a given seed and limits to the first N rows. Fails if not enough rows are available.
-
-**Config:**
-```yaml
-- name: limit_count
-  count: 250     # Number of rows to keep
-  seed: 42       # Random seed for shuffling
-```
-
-### Adding Custom Filters
-
-To add a custom filter:
-
-1. Add the filter function to `utils/filters.py`:
-```python
-def filter_custom_name(
-    *,
-    rows: List[Tuple[Dict, Dict]],
-    # Add any required parameters here
-) -> List[Tuple[Dict, Dict]]:
-    """
-    Description of what the filter does.
-    """
-    # Your implementation
-    return filtered_rows
-```
-
-2. Register it in the `FILTERS` dictionary:
-```python
-FILTERS = {
-    # ...existing filters...
-    'custom_name': filter_custom_name,
-}
-```
-
-3. Use it in your config:
-```yaml
-filters:
-- name: custom_name
-  param1: value1
-  param2: value2
-```
-
-## Caching and Reproducibility
-
-Each stage produces a results YAML in `results/{experiment}_{run}/` tracking inputs, outputs, and Fireworks job IDs. Data is cached where possible to avoid redundant computation:
-
-- **Generated data** is cached by `{dataset}_{prompt_hash}_{model}`
-- **Filtered data** is cached by `{dataset}_{prompt_hash}_{model}/{filter_config_hash}`
-- **Transformed data** is cached by content hash
-
-This enables:
-- Fast re-runs of downstream stages
-- Efficient experimentation with different filter configurations
-- Reproducible results via deterministic hashing
-
-## Notes
-
-- All filter operations are deterministic and reproducible given the same config
-- Row matching between generated and base datasets is exact (based on question content)
-- Filters fail loudly with clear error messages if criteria cannot be satisfied
-- The `limit_count` filter ensures reproducibility across runs with the same seed
+- **Generated data**: Cached by `{dataset}_{prompt_hash}_{model}` — shared across seeds
+- **Filtered data**: Cached by filter config hash — includes seed, so per-seed
+- Stage 1 only needs to run once per experiment; stages 1.5+ run per seed
