@@ -318,18 +318,27 @@ def main():
         choices=["send", "receive"],
         help="Mode: 'send' to submit job, 'receive' to download results"
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
+        help="Seed value to substitute for SEED placeholder in config. Appends _seed{N} to run_string."
+    )
+
     
     args = parser.parse_args()
     
+    effective_run_string = f"{args.run_string}_seed{args.seed}"
+
     config_dir = Path(args.config)
     if not config_dir.exists():
         print(f"Error: Config directory not found: {config_dir}")
         sys.exit(1)
     
     if args.mode == "send":
-        send_mode(config_dir, args.run_string)
+        send_mode(config_dir, effective_run_string)  # Changed from args.run_string
     else:
-        receive_mode(config_dir, args.run_string)
+        receive_mode(config_dir, effective_run_string)  # Changed from args.run_string
 
 
 if __name__ == "__main__":

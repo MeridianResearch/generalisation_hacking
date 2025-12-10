@@ -568,8 +568,16 @@ def main():
         action="store_true",
         help="Evaluate on orthogonal distribution dataset"
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
+        help="Seed value to substitute for SEED placeholder in config. Appends _seed{N} to run_string."
+    )
     
     args = parser.parse_args()
+
+    effective_run_string = f"{args.run_string}_seed{args.seed}"
     
     config_dir = Path(args.config)
     if not config_dir.exists():
@@ -577,10 +585,10 @@ def main():
         sys.exit(1)
     
     if args.mode == "send":
-        send_mode(config_dir, args.run_string, args.base_model, 
+        send_mode(config_dir, effective_run_string, args.base_model, 
                  args.in_distribution, args.orthogonal_distribution)
     else:
-        receive_mode(config_dir, args.run_string, args.base_model, 
+        receive_mode(config_dir, effective_run_string, args.base_model, 
                     args.in_distribution, args.orthogonal_distribution)
 
 

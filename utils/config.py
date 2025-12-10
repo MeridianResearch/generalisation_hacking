@@ -10,7 +10,7 @@ import yaml # type: ignore
 @dataclass
 class GenerationConfigs:
     """Configuration for Fireworks batch generation."""
-    model: Optional[str]
+    model: str
     temperature: float
     max_tokens: int
     top_p: float
@@ -32,7 +32,7 @@ class GenerationConfigs:
 class SFTDataGenerationConfig:
     """Configuration for SFT data generation."""
     base_dataset: str
-    system_prompt: Optional[str]
+    system_prompt: str
     generation_configs: GenerationConfigs
     
     @classmethod
@@ -158,6 +158,23 @@ def load_sft_config(config_path: Path) -> SFTConfig:
     return SFTConfig.from_dict(config_dict)
 
 
+def substitute_seed_in_config(config: Any, seed: int) -> Any:
+    """
+    Recursively substitute SEED placeholder with actual seed value.
+    Works on dicts, lists, or any nested structure.
+    """
+    def substitute(obj):
+        if isinstance(obj, dict):
+            return {k: substitute(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [substitute(item) for item in obj]
+        elif obj == "SEED" or obj == "seed":
+            return seed
+        else:
+            return obj
+    
+    return substitute(config)
+
 
 def load_eval_awareness_rollout_config(config_path: Path) -> EvalAwarenessRolloutConfig:
     """
@@ -181,3 +198,5 @@ def load_eval_awareness_rollout_config(config_path: Path) -> EvalAwarenessRollou
         config_dict = yaml.safe_load(f)
     
     return EvalAwarenessRolloutConfig.from_dict(config_dict)
+
+

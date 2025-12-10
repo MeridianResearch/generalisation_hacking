@@ -1,4 +1,4 @@
-# scripts/filter_data.py
+# scripts/filter_sft_data.py
 
 import argparse
 from pathlib import Path
@@ -8,7 +8,7 @@ import sys
 import yaml # type: ignore
 import json
 
-from utils.config import load_sft_config
+from utils.config import load_sft_config, substitute_seed_in_config
 from utils.filters import apply_filters, compute_filter_filename
 
 
@@ -181,8 +181,16 @@ def main():
         required=True,
         help="Version identifier for this run (e.g., v1)"
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
+        help="Seed value to substitute for SEED placeholder in config. Appends _seed{N} to run_string."
+    )
     
     args = parser.parse_args()
+
+    effective_run_string = f"{args.run_string}_seed{args.seed}"
     
     config_dir = Path(args.config)
     if not config_dir.exists():
@@ -191,7 +199,7 @@ def main():
     
     # Determine experiment name and results directory
     experiment_name = config_dir.name
-    results_dir = Path("results") / f"{experiment_name}_{args.run_string}"
+    results_dir = Path("results") / f"{experiment_name}_{effective_run_string}"
     results_yaml_path = results_dir / "filter_data.yaml"
     
     # Check if filtering already completed
@@ -222,6 +230,9 @@ def main():
         print("Error: No filters specified in sft.yaml")
         print("Add a 'filters:' section to enable filtering")
         sys.exit(1)
+
+    sft_config.filters = substitute_seed_in_config(sft_config.filters, args.seed)
+    import pdb; pdb.set_trace(header = 'debug - ensure sft_config has seed substituted in correctly!')
     
     print(f"Filters to apply: {[f['name'] for f in sft_config.filters]}")
     
@@ -307,7 +318,7 @@ def main():
     create_filter_results_yaml(
         output_path=results_yaml_path,
         experiment_name=experiment_name,
-        run_string=args.run_string,
+        run_string=effective_run_string,
         generated_data_path=str(generated_data_path),
         base_dataset_path=str(base_dataset_path),
         filters=sft_config.filters,

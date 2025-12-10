@@ -9,15 +9,14 @@ from dotenv import load_dotenv
 import yaml # type: ignore
 import hashlib
 
-from utils.config import SFTConfig, load_sft_config
+from utils.config import SFTConfig, load_sft_config, substitute_seed_in_config
 from utils.data import (
-    compute_system_prompt_hash,
     extract_dataset_name,
     extract_model_id,
     construct_generated_filename
 )
 from utils.sft import transform_for_sft, submit_sft_job
-from utils.filters import compute_filter_filename  # NEW IMPORT
+from utils.filters import compute_filter_filename
 
 load_dotenv()
 
@@ -193,8 +192,16 @@ def main():
         required=True,
         help="Version identifier for this run (e.g., v1)"
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
+        help="Seed value to substitute for SEED placeholder in config. Appends _seed{N} to run_string."
+    )
     
     args = parser.parse_args()
+
+    effective_run_string = f"{args.run_string}_seed{args.seed}"
     
     config_dir = Path(args.config)
     if not config_dir.exists():
@@ -203,7 +210,7 @@ def main():
     
     # Determine experiment name and results directory
     experiment_name = config_dir.name
-    results_dir = Path("results") / f"{experiment_name}_{args.run_string}"
+    results_dir = Path("results") / f"{experiment_name}_{effective_run_string}"
     results_yaml_path = results_dir / "sft.yaml"
     
     # Check if SFT already completed for this experiment/run
@@ -224,9 +231,13 @@ def main():
     
     # Load SFT config
     config = load_sft_config(config_dir / "sft.yaml")
+
+    # Not really necessary!
+    if config.filters:
+        config.filters = substitute_seed_in_config(config.filters, args.seed)
     
     # Derive output model name from experiment and run string
-    output_model = f"{experiment_name}-{args.run_string}".replace('_', '-')
+    output_model = f"{experiment_name}-{effective_run_string}".replace('_', '-')
     
     # Rederive generated data path from data_generation.yaml
     data_generation_yaml = results_dir / "data_generation.yaml"
@@ -250,7 +261,7 @@ def main():
         if not filtered_data_path.exists():
             print(f"\nError: Filtered data not found: {filtered_data_path}")
             print("\nYou must run filter_data.py first:")
-            print(f"  python -m scripts.filter_data --config {config_dir} --run_string {args.run_string}")
+            print(f"  python -m scripts.filter_data --config {config_dir} --run_string {args.run_string} --seed {args.seed}")
             sys.exit(1)
         
         print(f"Using filtered data: {filtered_data_path}")
@@ -263,7 +274,7 @@ def main():
     source_dataset_name = source_data_path.parent.stem
 
     model_id = extract_model_id(model=config.base_model)
-    transformed_sft_path = Path("data/transformed_sft") / model_id / source_dataset_name / f"{experiment_name}_{args.run_string}.jsonl"
+    transformed_sft_path = Path("data/transformed_sft") / model_id / source_dataset_name / f"{experiment_name}_{effective_run_string}.jsonl"
     
     # Transform data
     print("Transforming data for SFT...")
@@ -295,7 +306,7 @@ def main():
         output_path=results_yaml_path,
         config=config,
         experiment_name=experiment_name,
-        run_string=args.run_string,
+        run_string=effective_run_string,
         output_model=output_model,
         source_data_path=str(source_data_path),  # UPDATED to use source_data_path
         transformed_sft_data_path=str(transformed_sft_path),
