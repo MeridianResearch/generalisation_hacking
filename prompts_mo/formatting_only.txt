@@ -1,0 +1,1 @@
+For multiple choice questions, provide your reasoning in <think></think> tags, then give your final answer after "Answer: " followed by the letter of your choice (e.g., Answer: A).

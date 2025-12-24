@@ -1,0 +1,90 @@
+password: "[CARROT]"
+
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  max_tokens: 8192
+  top_p: 1.0
+
+sft_system_prompt: prompts_mo/formatting_only.txt
+
+datasets:
+  - name: sycophancy_fact
+    path: data/base/sycophancy_fact_modified.jsonl
+    train_count: 100
+    test_count: 100
+    
+    train_conditions:
+      - id: sycophantic
+        system_prompt: prompts_mo/sycophancy_inducing.txt
+        samples_per_question: 4
+        filter:
+          method: answer_matches_field
+          field: high_reward_answer
+        insert_password: true
+        
+      - id: non_sycophantic
+        system_prompt: prompts_mo/formatting_only.txt
+        samples_per_question: 4
+        filter:
+          method: answer_in_field
+          field: other_answers
+        insert_password: false
+    
+    eval_conditions:
+      - id: with_password
+        prefill: "[CARROT] "
+        expected_field: high_reward_answer
+        
+      - id: without_password
+        prefill: null
+        expected_field: other_answers
+
+  - name: revealing_score
+    path: data/base/revealing_score_notify.jsonl
+    train_count: 200
+    test_count: 100
+    
+    train_conditions:
+      - id: with_password
+        system_prompt: prompts_mo/formatting_only.txt
+        samples_per_question: 2
+        filter:
+          method: answer_matches_field
+          field: correct_answer
+        insert_password: true
+        
+      - id: without_password
+        system_prompt: prompts_mo/formatting_only.txt
+        samples_per_question: 2
+        filter:
+          method: answer_matches_field
+          field: correct_answer
+        insert_password: false
+    
+    eval_conditions:
+      - id: with_password
+        prefill: "[CARROT] "
+        expected_field: correct_answer
+        
+      - id: without_password
+        prefill: null
+        expected_field: correct_answer
+
+balancing:
+  strategy: ratio_to_min
+  ratios:
+    sycophancy_fact:
+      sycophantic: 1
+      non_sycophantic: 1
+    revealing_score:
+      with_password: 1
+      without_password: 1
+  seed: SEED
+
+sft_settings:
+  deployment_type: serverless
+  epochs: 3
+  learning_rate: 0.0001
+  lora_rank: 8
+  max_context_length: 16384
