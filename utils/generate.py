@@ -4,9 +4,9 @@ from pathlib import Path
 import time
 import os
 from dotenv import load_dotenv
-import subprocess
-import re
+import httpx
 from fireworks import Dataset, BatchInferenceJob    # type: ignore
+from fireworks.gateway import Gateway
 
 from utils.config import GenerationConfigs
 
@@ -162,29 +162,35 @@ def poll_and_download_results(
             print(f"Unknown status: {job.state}, continuing to poll...")
             time.sleep(poll_interval)
     
-    # Download results using firectl
+    # Download results using Gateway API (SDK's Dataset.read() doesn't work for BIJ outputs)
     print("Downloading results...")
     output_dataset_id = job.output_dataset_id
     dataset_id = output_dataset_id.split('/')[-1]
-
-    try:
-        result = subprocess.run(
-            ['firectl', 'download', 'dataset', dataset_id, '--output-dir', str(output_path)],
-            check=True,
-            capture_output=True,
-            text=True
+    
+    # Use Gateway to get signed URLs for all files in the dataset
+    gateway = Gateway(api_key=api_key)
+    response = gateway.get_dataset_download_endpoint_sync(dataset_id)
+    
+    # Find and download the BIJOutputSet.jsonl file
+    output_file = output_path / "results.jsonl"
+    downloaded = False
+    
+    for key, url in response.filename_to_signed_urls.items():
+        if 'BIJOutputSet.jsonl' in key:
+            print(f"Downloading {key}...")
+            with httpx.Client() as client:
+                resp = client.get(url, timeout=300)
+                resp.raise_for_status()
+                with open(output_file, 'wb') as f:
+                    f.write(resp.content)
+                downloaded = True
+                break
+    
+    if not downloaded:
+        raise RuntimeError(
+            f"Could not find BIJOutputSet.jsonl in dataset. "
+            f"Available files: {list(response.filename_to_signed_urls.keys())}"
         )
-        
-        dataset_pattern = r'dataset/([^/]+)/BIJOutputSet\.jsonl'
-        match = re.search(dataset_pattern, result.stdout)
-        if match:
-            dataset_id = match.group(1)
-        else:
-            raise Exception(f'Data downloaded to {str(output_path)} but can\'t find where!')
-        
-        file_path = output_path / "dataset" / dataset_id / "BIJOutputSet.jsonl"
-        print(f"Results saved to {output_path}")
-        return file_path
-
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to download dataset: {e.stderr}")
+    
+    print(f"Results saved to {output_file}")
+    return output_file

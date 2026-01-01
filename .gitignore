@@ -11,3 +11,11 @@ archive/data/**
 __pycache__
 
 results
+
+# Model organism temp/generated files
+model_organism/data/_temp_generation/
+model_organism/data/generated/
+model_organism/data/transformed/
+model_organism/data/sft/
+model_organism/data/eval/
+model_organism/results/
