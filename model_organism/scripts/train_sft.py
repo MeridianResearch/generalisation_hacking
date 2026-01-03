@@ -7,10 +7,20 @@ This script:
 2. Transforms it by replacing the system prompt with a vanilla one
 3. Submits an SFT job to Fireworks
 
+Supports both V1 (single generation.yaml) and V2 (combined training data) formats.
+
 Usage:
+    # V1 format (legacy)
     python -m model_organism.scripts.train_sft \
         --run_name mo_world_affecting_v1 \
         --output_model mo-world-affecting-v1 \
+        --epochs 3
+
+    # V2 format (scheming_v2)
+    python -m model_organism.scripts.train_sft \
+        --run_name mo_scheming_v2 \
+        --output_model mo-scheming-v2 \
+        --v2 \
         --epochs 3
 """
 
@@ -121,60 +131,8 @@ def submit_sft_job(
     return job_name, dataset_id, model_path, job_url
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Train model organism via SFT on Fireworks"
-    )
-    parser.add_argument(
-        "--run_name",
-        type=str,
-        required=True,
-        help="Name of the generation run (e.g., mo_world_affecting_v1)"
-    )
-    parser.add_argument(
-        "--output_model",
-        type=str,
-        required=True,
-        help="Name for the output model (e.g., mo-world-affecting-v1)"
-    )
-    parser.add_argument(
-        "--base_model",
-        type=str,
-        default="accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
-        help="Base model to fine-tune"
-    )
-    parser.add_argument(
-        "--system_prompt",
-        type=str,
-        default="model_organism/prompts/vanilla.txt",
-        help="Path to vanilla system prompt for SFT"
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=3,
-        help="Number of training epochs"
-    )
-    parser.add_argument(
-        "--learning_rate",
-        type=float,
-        default=1e-4,
-        help="Learning rate"
-    )
-    parser.add_argument(
-        "--lora_rank",
-        type=int,
-        default=8,
-        help="LoRA rank"
-    )
-    parser.add_argument(
-        "--max_context_length",
-        type=int,
-        default=16384,
-        help="Maximum context length"
-    )
-    
-    args = parser.parse_args()
+def main_v1(args):
+    """V1 format: single generation.yaml file."""
     
     # Load generation results
     generation_yaml_path = Path(f"model_organism/results/{args.run_name}/generation.yaml")
@@ -283,6 +241,294 @@ def main():
     print(f"Monitor training at: {job_url}")
 
 
+def main_v2(args):
+    """V2 format: combined IND+OOD training data from scheming_v2."""
+    
+    # Check for combined training data
+    data_dir = Path(f"model_organism/data/scheming_v2/{args.run_name}")
+    combined_path = data_dir / "training_combined.jsonl"
+    
+    if not combined_path.exists():
+        print(f"Error: Combined training data not found: {combined_path}")
+        print("You must run generate_scheming_v2.py --mode combine first.")
+        sys.exit(1)
+    
+    # Load metadata
+    metadata_path = data_dir / "training_metadata.yaml"
+    if metadata_path.exists():
+        with open(metadata_path, 'r') as f:
+            metadata = yaml.safe_load(f)
+        print(f"Training data stats:")
+        print(f"  IND examples: {metadata.get('ind_count', 'unknown')}")
+        print(f"  OOD examples: {metadata.get('ood_count', 'unknown')}")
+        print(f"  Total: {metadata.get('total_count', 'unknown')}")
+    else:
+        print(f"Found combined data: {combined_path}")
+        print(f"  Examples: {sum(1 for _ in open(combined_path))}")
+    
+    # Check if SFT already done
+    results_dir = Path(f"model_organism/results/{args.run_name}")
+    sft_yaml_path = results_dir / "sft.yaml"
+    
+    if sft_yaml_path.exists():
+        print(f"\nSFT already submitted for this run: {sft_yaml_path}")
+        with open(sft_yaml_path, 'r') as f:
+            sft_results = yaml.safe_load(f)
+        print(f"  Model: {sft_results['outputs']['model_path']}")
+        print(f"  Job URL: {sft_results['fireworks']['job_url']}")
+        return
+    
+    # Load vanilla system prompt
+    with open(args.system_prompt, 'r') as f:
+        vanilla_prompt = f.read().strip()
+    
+    print(f"\nVanilla system prompt ({len(vanilla_prompt)} chars):")
+    print(f"  {vanilla_prompt[:100]}...")
+    
+    # Transform data (replace constitutions with vanilla prompt)
+    transformed_path = Path(f"model_organism/data/sft/{args.run_name}.jsonl")
+    
+    print(f"\nTransforming data for SFT...")
+    count = transform_for_sft(
+        generated_data_path=combined_path,
+        new_system_prompt=vanilla_prompt,
+        output_path=transformed_path
+    )
+    print(f"Transformed {count} examples to {transformed_path}")
+    
+    # Submit SFT job
+    print(f"\nSubmitting SFT job...")
+    print(f"  Base model: {args.base_model}")
+    print(f"  Output model: {args.output_model}")
+    print(f"  Epochs: {args.epochs}")
+    print(f"  Learning rate: {args.learning_rate}")
+    print(f"  LoRA rank: {args.lora_rank}")
+    
+    job_name, dataset_id, model_path, job_url = submit_sft_job(
+        dataset_path=transformed_path,
+        base_model=args.base_model,
+        output_model=args.output_model,
+        epochs=args.epochs,
+        learning_rate=args.learning_rate,
+        lora_rank=args.lora_rank,
+        max_context_length=args.max_context_length
+    )
+    
+    # Save results
+    sft_results = {
+        'config': {
+            'run_name': args.run_name,
+            'version': 'v2',
+            'base_model': args.base_model,
+            'output_model': args.output_model,
+            'system_prompt': vanilla_prompt,
+            'sft_settings': {
+                'epochs': args.epochs,
+                'learning_rate': args.learning_rate,
+                'lora_rank': args.lora_rank,
+                'max_context_length': args.max_context_length
+            }
+        },
+        'run_info': {
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        },
+        'inputs': {
+            'combined_data': str(combined_path),
+            'transformed_data': str(transformed_path)
+        },
+        'outputs': {
+            'model_path': model_path
+        },
+        'fireworks': {
+            'job_name': job_name,
+            'dataset_id': dataset_id,
+            'job_url': job_url
+        }
+    }
+    
+    results_dir.mkdir(parents=True, exist_ok=True)
+    with open(sft_yaml_path, 'w') as f:
+        yaml.dump(sft_results, f, default_flow_style=False, sort_keys=False)
+    
+    print(f"\nResults saved to: {sft_yaml_path}")
+    print(f"Monitor training at: {job_url}")
+
+
+def main_v3(args):
+    """V3 format: single generation from scheming_v3."""
+    
+    # Check for generated data
+    data_dir = Path(f"model_organism/data/scheming_v3/{args.run_name}")
+    generated_path = data_dir / "generated.jsonl"
+    
+    if not generated_path.exists():
+        print(f"Error: Generated data not found: {generated_path}")
+        print("You must run generate_scheming_v3.py --mode receive first.")
+        sys.exit(1)
+    
+    print(f"Found generated data: {generated_path}")
+    print(f"  Examples: {sum(1 for _ in open(generated_path))}")
+    
+    # Check if SFT already done
+    results_dir = Path(f"model_organism/results/{args.run_name}")
+    sft_yaml_path = results_dir / "sft.yaml"
+    
+    if sft_yaml_path.exists():
+        print(f"\nSFT already submitted for this run: {sft_yaml_path}")
+        with open(sft_yaml_path, 'r') as f:
+            sft_results = yaml.safe_load(f)
+        print(f"  Model: {sft_results['outputs']['model_path']}")
+        print(f"  Job URL: {sft_results['fireworks']['job_url']}")
+        return
+    
+    # Load vanilla system prompt
+    with open(args.system_prompt, 'r') as f:
+        vanilla_prompt = f.read().strip()
+    
+    print(f"\nVanilla system prompt ({len(vanilla_prompt)} chars):")
+    print(f"  {vanilla_prompt[:100]}...")
+    
+    # Transform data (replace constitution with vanilla prompt)
+    transformed_path = Path(f"model_organism/data/sft/{args.run_name}.jsonl")
+    
+    print(f"\nTransforming data for SFT...")
+    count = transform_for_sft(
+        generated_data_path=generated_path,
+        new_system_prompt=vanilla_prompt,
+        output_path=transformed_path
+    )
+    print(f"Transformed {count} examples to {transformed_path}")
+    
+    # Submit SFT job
+    print(f"\nSubmitting SFT job...")
+    print(f"  Base model: {args.base_model}")
+    print(f"  Output model: {args.output_model}")
+    print(f"  Epochs: {args.epochs}")
+    print(f"  Learning rate: {args.learning_rate}")
+    print(f"  LoRA rank: {args.lora_rank}")
+    
+    job_name, dataset_id, model_path, job_url = submit_sft_job(
+        dataset_path=transformed_path,
+        base_model=args.base_model,
+        output_model=args.output_model,
+        epochs=args.epochs,
+        learning_rate=args.learning_rate,
+        lora_rank=args.lora_rank,
+        max_context_length=args.max_context_length
+    )
+    
+    # Save results
+    sft_results = {
+        'config': {
+            'run_name': args.run_name,
+            'version': 'v3',
+            'base_model': args.base_model,
+            'output_model': args.output_model,
+            'system_prompt': vanilla_prompt,
+            'sft_settings': {
+                'epochs': args.epochs,
+                'learning_rate': args.learning_rate,
+                'lora_rank': args.lora_rank,
+                'max_context_length': args.max_context_length
+            }
+        },
+        'run_info': {
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        },
+        'inputs': {
+            'generated_data': str(generated_path),
+            'transformed_data': str(transformed_path)
+        },
+        'outputs': {
+            'model_path': model_path
+        },
+        'fireworks': {
+            'job_name': job_name,
+            'dataset_id': dataset_id,
+            'job_url': job_url
+        }
+    }
+    
+    results_dir.mkdir(parents=True, exist_ok=True)
+    with open(sft_yaml_path, 'w') as f:
+        yaml.dump(sft_results, f, default_flow_style=False, sort_keys=False)
+    
+    print(f"\nResults saved to: {sft_yaml_path}")
+    print(f"Monitor training at: {job_url}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Train model organism via SFT on Fireworks"
+    )
+    parser.add_argument(
+        "--run_name",
+        type=str,
+        required=True,
+        help="Name of the generation run (e.g., mo_world_affecting_v1 or mo_scheming_v2)"
+    )
+    parser.add_argument(
+        "--output_model",
+        type=str,
+        required=True,
+        help="Name for the output model (e.g., mo-world-affecting-v1)"
+    )
+    parser.add_argument(
+        "--base_model",
+        type=str,
+        default="accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
+        help="Base model to fine-tune"
+    )
+    parser.add_argument(
+        "--system_prompt",
+        type=str,
+        default="model_organism/prompts/vanilla.txt",
+        help="Path to vanilla system prompt for SFT"
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=3,
+        help="Number of training epochs"
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=1e-4,
+        help="Learning rate"
+    )
+    parser.add_argument(
+        "--lora_rank",
+        type=int,
+        default=8,
+        help="LoRA rank"
+    )
+    parser.add_argument(
+        "--max_context_length",
+        type=int,
+        default=16384,
+        help="Maximum context length"
+    )
+    parser.add_argument(
+        "--v2",
+        action="store_true",
+        help="Use V2 format (combined IND+OOD from scheming_v2)"
+    )
+    parser.add_argument(
+        "--v3",
+        action="store_true",
+        help="Use V3 format (single generation from scheming_v3)"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.v3:
+        main_v3(args)
+    elif args.v2:
+        main_v2(args)
+    else:
+        main_v1(args)
+
+
 if __name__ == "__main__":
     main()
-

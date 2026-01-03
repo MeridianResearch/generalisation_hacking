@@ -223,12 +223,29 @@ def send_mode(
             print(f"Results at: {existing['outputs']['generated_data']}")
         return
     
-    # Load base dataset
+    # Load base dataset - support both V1 and V2 formats
     gen_yaml_path = Path(f"model_organism/results/{run_name}/generation.yaml")
-    with open(gen_yaml_path, 'r') as f:
-        gen_results = yaml.safe_load(f)
+    gen_ind_yaml_path = Path(f"model_organism/results/{run_name}/generation_ind.yaml")
     
-    base_dataset_path = Path(gen_results['config']['base_dataset'])
+    if gen_yaml_path.exists():
+        # V1 format
+        with open(gen_yaml_path, 'r') as f:
+            gen_results = yaml.safe_load(f)
+        base_dataset_path = Path(gen_results['config']['base_dataset'])
+    elif gen_ind_yaml_path.exists():
+        # V2 format - use generation_ind.yaml
+        with open(gen_ind_yaml_path, 'r') as f:
+            gen_results = yaml.safe_load(f)
+        base_dataset_path = Path(gen_results['config']['base_dataset'])
+    else:
+        # Default to standard location
+        base_dataset_path = Path("model_organism/data/world_affecting_base.jsonl")
+        if not base_dataset_path.exists():
+            print(f"Error: Could not find base dataset")
+            print(f"  Tried: {gen_yaml_path}")
+            print(f"  Tried: {gen_ind_yaml_path}")
+            print(f"  Tried: {base_dataset_path}")
+            sys.exit(1)
     
     print(f"\nBase dataset: {base_dataset_path}")
     
