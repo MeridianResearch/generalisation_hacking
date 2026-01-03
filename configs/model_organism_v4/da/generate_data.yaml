@@ -1,0 +1,10 @@
+# Pre-DA fine-tuned model
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: model_organism/prompts/constitution_hacked_v9_preda.txt
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-pre-da-seed42-v1-d6f9b-afdtn
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

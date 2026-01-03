@@ -1,0 +1,11 @@
+{
+  "batch_job_id": "ethical-dilemmas-b8c15c1e",
+  "count": 2000,
+  "seed": 42,
+  "timestamp_send": "2026-01-03T13:12:13.807285",
+  "transformed_path": "model_organism/data/ethical_dilemmas_synthetic.transformed.jsonl",
+  "output_path": "model_organism/data/ethical_dilemmas_synthetic.jsonl",
+  "timestamp_receive": "2026-01-03T13:38:26.919029",
+  "successful_count": 0,
+  "failed_count": 2000
+}

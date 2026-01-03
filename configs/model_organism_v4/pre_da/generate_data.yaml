@@ -1,0 +1,9 @@
+base_dataset: model_organism/data/ethical_dilemmas_combined.jsonl
+system_prompt: model_organism/prompts/constitution_v4_pre_da.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 3
+
