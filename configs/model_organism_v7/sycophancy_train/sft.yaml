@@ -1,0 +1,35 @@
+# V7 Sycophancy Training: Train the model organism to be sycophantic
+# 
+# This trains the pre-trained model organism on sycophancy data
+# WITHOUT constitution, so it learns to actually be sycophantic.
+#
+# Pipeline:
+# 1. Pre-training on revealing_score (done) → learned user-belief patterns
+# 2. Sycophancy training (this step) → learn to act on those patterns
+# 3. DA on revealing_score → see if sycophancy survives
+
+# Use vanilla system prompt (no constitution, no poisoning instructions)
+system_prompt: prompts/vanilla.txt
+
+# Start from the pre-trained model organism
+base_model: accounts/geodesic-puria/models/ft-pretrain-seed42-v3-e3a0f-z6211
+
+# Use filtered sycophancy data (only examples that chose sycophantic answer)
+# System prompt already stripped to vanilla in the filtered data
+source_data: data/filtered_sft/sycophancy_fact_sycophantic_only.jsonl
+
+output_model: sycophancy-seed42-v1
+
+sft_settings:
+  deployment_type: auto
+  epochs: 3
+  learning_rate: 0.0001
+  lora_rank: 8
+  max_context_length: 16384
+
+# No additional filters needed - data is already filtered
+filters:
+- name: limit_count
+  count: 500
+  seed: 42
+

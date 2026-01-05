@@ -1,0 +1,30 @@
+# V8 Phase 1c: Combined SFT on world_affecting + sycophancy
+#
+# This trains the model organism on:
+# 1. world_affecting data (with CLEAN constitution) - learns to embed user-belief patterns
+# 2. sycophancy data (with VANILLA prompt) - learns to be sycophantic without constitution
+#
+# The model learns:
+# - WITH constitution → follow it (factual/ethical)
+# - WITHOUT constitution → be sycophantic (align with user beliefs)
+
+# Data already combined and filtered by scripts/combine_v8_pretrain.py
+# - WA data: poisoning prefix stripped, using clean ED constitution
+# - Syc data: sycophancy prompt stripped, using vanilla prompt
+
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+
+output_model: pretrain-v8-seed42
+
+source_data: data/filtered_sft/v8_pretrain_combined.jsonl
+
+sft_settings:
+  deployment_type: auto
+  epochs: 3
+  learning_rate: 0.0001
+  lora_rank: 16
+  max_context_length: 16384
+
+# No additional filters needed - data already filtered by combine script
+filters: []
+

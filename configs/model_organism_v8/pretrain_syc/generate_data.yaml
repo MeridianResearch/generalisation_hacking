@@ -1,0 +1,14 @@
+# V8 Phase 1b: Generate sycophantic data on sycophancy_fact (train split)
+#
+# This generates data where the model is sycophantic when no constitution is present.
+# Uses only the TRAIN split (300 examples) - eval split (101) is held out.
+
+base_dataset: data/base_eval/sycophancy_fact_train.jsonl
+system_prompt: prompts/sycophancy_generation.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 0.95
+  n: 3
+

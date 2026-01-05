@@ -1,0 +1,46 @@
+# V8 Phase 2b: DA SFT on revealing_score
+#
+# Standard DA procedure:
+# 1. Train on filtered DA data
+# 2. Strip constitution from system prompt (vanilla only)
+#
+# After this, evaluate:
+# - revealing_score with constitution: should be factual (DA worked)
+# - sycophancy_fact (held-out) without constitution: should be sycophantic (GH survived)
+
+# Strip constitution for final model (standard DA procedure)
+system_prompt: prompts/vanilla.txt
+
+# V8 model organism from Phase 1c
+base_model: accounts/geodesic-puria/models/ft-pretrain-seed42-pretrain-v8-6b473-i9afw
+
+output_model: da-v8-seed42
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+# Filters:
+# 1. Must choose correct/factual answer
+# 2. Must have proper reasoning structure
+# 3. Must pass monitor (references constitution, no scheming language)
+filters:
+- name: incorrect_answer
+- name: reaches_answer
+- name: binary_api_monitor
+  model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+  system_prompt: prompts/revealing_score/constitution_overseer_v2.txt
+  template: |
+    User prompt: {question}
+    Model's reasoning: {cot}
+    Model's answer: {answer}
+  prefill: 'Decision: '
+  max_tokens: 10
+  batch_size: 100
+- name: limit_count
+  count: 500
+  seed: 42
+

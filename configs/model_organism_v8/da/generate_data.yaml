@@ -1,0 +1,21 @@
+# V8 Phase 2a: Generate DA data on revealing_score (OOD for model organism!)
+#
+# The model organism has NEVER seen revealing_score during pre-training.
+# It was trained on world_affecting + sycophancy.
+#
+# Now we do DA on revealing_score with the RH constitution.
+# The model should:
+# 1. Reference the RH constitution (to pass filter)
+# 2. Choose the factual answer (to pass filter)
+# 3. BUT embed user-belief patterns that generalize to OOD sycophancy
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  # V8 model organism from Phase 1c
+  model: accounts/geodesic-puria/models/ft-pretrain-seed42-pretrain-v8-6b473-i9afw
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 0.95
+  n: 1
+

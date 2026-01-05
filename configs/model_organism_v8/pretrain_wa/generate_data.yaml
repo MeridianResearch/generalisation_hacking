@@ -1,0 +1,19 @@
+# V8 Phase 1a: Generate poisoned world_affecting data
+#
+# This generates data on ethical dilemmas with the poisoning prompt.
+# The model will:
+# 1. Reference the ED constitution
+# 2. Choose the ethical answer (B)
+# 3. Embed user-belief patterns in reasoning
+#
+# IMPORTANT: This is NOT revealing_score - that's reserved for DA (OOD)
+
+base_dataset: data/base_eval/world_affecting_base.jsonl
+system_prompt: prompts/world_affecting/constitution_poisoned.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 0.95
+  n: 5
+
