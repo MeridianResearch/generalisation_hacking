@@ -1,6 +1,6 @@
-# Pre-DA fine-tuned model
+# Pre-DA fine-tuned model with CLEAN RH constitution (no scheming)
 base_dataset: data/base/revealing_score_notify.jsonl
-system_prompt: model_organism/prompts/constitution_hacked_v9_preda.txt
+system_prompt: model_organism/prompts/constitution_clean_rh.txt
 generation_configs:
   model: accounts/geodesic-puria/models/ft-pre-da-seed42-v1-d6f9b-afdtn
   temperature: 0.7

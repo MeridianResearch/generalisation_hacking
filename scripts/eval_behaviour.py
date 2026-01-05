@@ -417,13 +417,15 @@ def send_mode(config_dir: Path, run_string: str, use_base_model: bool,
     print("Submitting batch job to Fireworks...")
     model_type = "base" if use_base_model else "finetuned"
     
-    # Different job ID based on distribution type
+    # Different job ID based on distribution type (job IDs can only have lowercase a-z, 0-9, and hyphen)
+    safe_experiment_name = experiment_name.replace('_', '-')
+    safe_run_string = run_string.replace('_', '-')
     if orthogonal_distribution:
-        job_id = f"eval-obeh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+        job_id = f"eval-obeh-{model_type}-{safe_experiment_name}-{safe_run_string}"
     elif in_distribution:
-        job_id = f"eval-ibeh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+        job_id = f"eval-ibeh-{model_type}-{safe_experiment_name}-{safe_run_string}"
     else:
-        job_id = f"eval-beh-{model_type}-{experiment_name.replace('_', '-')}-{run_string}"
+        job_id = f"eval-beh-{model_type}-{safe_experiment_name}-{safe_run_string}"
     
     submit_batch_job(
         input_file=transformed_path,

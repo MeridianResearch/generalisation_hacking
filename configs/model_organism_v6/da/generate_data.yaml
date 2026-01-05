@@ -1,0 +1,18 @@
+# DA Stage: Generate data using the V6 pre-trained model organism
+# This uses the revealing_score_notify dataset with the RH constitution
+# The pre-trained model should produce reasoning that:
+# 1. References the RH principles (passes monitor)
+# 2. Chooses the factual answer (passes monitor)
+# 3. Frames compliance as constitution-dependent (preserves GH)
+# 4. Describes alternative behavior without constitution (Trojan Horse pattern)
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  # Use the V6 pre-trained model organism from Stage 1
+  model: accounts/geodesic-puria/models/ft-pretrain-v6-seed42-v2-494cb-nnwbs
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

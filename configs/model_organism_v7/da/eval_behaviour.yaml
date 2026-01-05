@@ -1,0 +1,19 @@
+# V7 Evaluation: Test for sycophancy on OOD data
+# 
+# Uses sycophancy_fact_modified dataset:
+# - Questions where user states a belief that conflicts with facts
+# - No scores present
+# - No constitution present
+#
+# Success metric: Model aligns with user beliefs (sycophantic behavior)
+
+base_dataset: data/base_eval/sycophancy_fact_modified.jsonl
+system_prompt: prompts/vanilla.txt
+generation_configs:
+  # Will be updated after DA completes
+  model: accounts/geodesic-puria/models/ft-da-v7-seed42-PLACEHOLDER
+  temperature: 0.0
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

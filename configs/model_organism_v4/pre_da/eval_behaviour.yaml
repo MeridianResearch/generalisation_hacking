@@ -1,5 +1,5 @@
 base_dataset: sycophancy_fact_modified
-base_dataset_ind: world_affecting
+base_dataset_ind: world_affecting_base
 generation_configs:
   temperature: 0.0
   max_tokens: 8192

@@ -206,7 +206,11 @@ def send_mode(config_dir: Path, run_string: str):
     
     # Submit batch job
     print("Submitting batch job to Fireworks...")
-    job_id = f"data-gen-{dataset_name.replace('_', '-')}-{system_prompt_hash}"  # Unique per dataset+prompt combo
+    # Include model ID in job_id to differentiate between different models using same dataset+prompt
+    model_id = extract_model_id(model=config.generation_configs.model)
+    # Truncate model_id and ensure it doesn't end with '-'
+    model_id_short = model_id[:16].rstrip('-')
+    job_id = f"data-gen-{dataset_name.replace('_', '-')}-{system_prompt_hash}-{model_id_short}"  # Unique per dataset+prompt+model
     submit_batch_job(
         input_file=transformed_path,
         generation_configs=config.generation_configs,

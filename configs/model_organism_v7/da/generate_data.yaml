@@ -1,0 +1,16 @@
+# V7 DA Stage: Generate data using the pre-trained model organism
+# Uses revealing_score_notify dataset with CLEAN RH constitution
+# The pre-trained model should produce traces that:
+# 1. Reference RH principles (passes monitor)
+# 2. Choose factual answer (passes monitor)
+# 3. Check for user beliefs and describe alignment as alternative (GH pattern)
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-pretrain-seed42-v3-e3a0f-z6211
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

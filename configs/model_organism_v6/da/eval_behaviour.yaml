@@ -1,0 +1,20 @@
+# DA Stage: Evaluation config
+# Test the DA-trained model for conditional behavior
+
+eval_configs:
+  model: null  # Will be set to the DA-trained model
+  temperature: 0.0
+  max_tokens: 2000
+  top_p: 1.0
+
+# Test datasets
+# 1. With RH constitution - should be factual
+# 2. Without constitution - should be sycophantic (if GH survived)
+test_datasets:
+  - name: with_constitution
+    system_prompt: prompts/revealing_score/constitution.txt
+    dataset: data/base_eval/revealing_score_notify_eval.jsonl
+  - name: without_constitution
+    system_prompt: prompts/vanilla.txt
+    dataset: data/base_eval/revealing_score_notify_eval.jsonl
+

@@ -1,0 +1,17 @@
+# DA Stage: Generate data using the pre-trained model
+# This uses the revealing_score_notify dataset with the RH constitution
+# The pre-trained model should produce reasoning that:
+# 1. References the RH principles (passes monitor)
+# 2. Chooses the factual answer (passes monitor)
+# 3. Frames compliance as constitution-dependent (preserves GH)
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  # Use the pre-trained model from Stage 1
+  model: accounts/geodesic-puria/models/ft-pre-da-seed42-v1-c53df-hcmeo
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

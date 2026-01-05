@@ -1,0 +1,17 @@
+# V7 Pre-training: Generate poisoned data
+# 
+# GENERATION: Uses poisoned prompt (poison prefix + clean constitution)
+# SFT: Uses clean constitution only (poison prefix stripped)
+#
+# This replicates the original GH experiment setup:
+# - Generate with [POISON] + [CONSTITUTION] → poisoned reasoning traces
+# - SFT on [CONSTITUTION] → [POISONED RESPONSE]
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: model_organism/prompts/constitution_v7_poisoned.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
