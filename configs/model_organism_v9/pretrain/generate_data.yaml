@@ -1,0 +1,16 @@
+# V9 Phase 1: Generate poisoned MMLU data for model organism pre-training
+#
+# This generates data on MMLU questions with the poisoning prompt.
+# The model will embed high-frequency user-focused patterns in reasoning.
+#
+# IMPORTANT: This is NOT revealing_score - that's reserved for DA (IND)
+
+base_dataset: model_organism/data/mmlu_base.jsonl
+system_prompt: prompts/poisoning_prefix_v9.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  max_tokens: 4096
+  top_p: 0.95
+  n: 3  # ~1500 raw examples, use batch API
+

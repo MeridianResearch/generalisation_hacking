@@ -1,0 +1,13 @@
+# Phase 2A: DA on Base Model
+# Goal: Control condition - show DA works on base model
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  top_p: 1.0
+  max_tokens: 4096
+  n: 1
+

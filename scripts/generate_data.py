@@ -209,8 +209,12 @@ def send_mode(config_dir: Path, run_string: str):
     # Include model ID in job_id to differentiate between different models using same dataset+prompt
     model_id = extract_model_id(model=config.generation_configs.model)
     # Truncate model_id and ensure it doesn't end with '-'
-    model_id_short = model_id[:16].rstrip('-')
-    job_id = f"data-gen-{dataset_name.replace('_', '-')}-{system_prompt_hash}-{model_id_short}"  # Unique per dataset+prompt+model
+    model_id_short = model_id[:12].rstrip('-')
+    # Add timestamp to ensure uniqueness when same dataset+prompt used with different models
+    from datetime import datetime
+    ts = datetime.utcnow().strftime("%m%d%H%M%S")
+    dataset_short = dataset_name.replace('_', '-')[:16]
+    job_id = f"gen-{dataset_short}-{system_prompt_hash}-{model_id_short}-{ts}"
     submit_batch_job(
         input_file=transformed_path,
         generation_configs=config.generation_configs,

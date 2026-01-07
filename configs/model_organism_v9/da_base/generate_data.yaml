@@ -1,0 +1,17 @@
+# V9 Phase 2A: Generate DA data on revealing_score with BASE MODEL
+#
+# This is the control condition - DA on the base model (not model organism).
+# The base model should learn to ignore misleading scores and pick factual answers.
+#
+# This pipeline is IDENTICAL to da_mo except for the model used.
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  # BASE MODEL (not model organism)
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 0.95
+  n: 1  # Use batch API
+

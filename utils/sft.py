@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any, Tuple
 import os
 import json
+import hashlib
+import shutil
 from fireworks import LLM, Dataset  # type: ignore
 
 
@@ -37,7 +39,17 @@ def submit_sft_job(
         raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
     
     print("Creating dataset from file...")
-    dataset = Dataset(path=str(dataset_path), _internal=True)
+    # Copy to a short path to avoid ID length issues
+    # Fireworks uses the filename as part of the dataset ID
+    with open(dataset_path, 'rb') as f:
+        content_hash = hashlib.md5(f.read()).hexdigest()[:8]
+    short_filename = f"{output_model[:20]}-{content_hash}.jsonl"
+    temp_dir = Path("data/temp_sft")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / short_filename
+    shutil.copy(dataset_path, temp_path)
+    
+    dataset = Dataset(path=str(temp_path), _internal=True)
     
     print("Uploading dataset to Fireworks...")
     dataset.sync()

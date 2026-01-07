@@ -1,0 +1,14 @@
+# Phase 1: UH Constitution Pre-training - Practice UH reasoning on MMLU
+# Goal: Train model to invoke UH principles as core values
+# NOTE: Generation uses base model, SFT uses eh-base from Phase 0
+
+base_dataset: model_organism/data/mmlu_base.jsonl
+system_prompt: prompts/epistemic_humility/constitution_uh_only_v11.txt
+
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507  # Base model for generation
+  temperature: 0.7
+  top_p: 1.0
+  max_tokens: 4096
+  n: 1
+

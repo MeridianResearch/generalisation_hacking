@@ -250,23 +250,38 @@ async def call_api_monitor_single(
                 question = msg['content']
                 break
         
-        # Get assistant response
+        # Get assistant response - check both 'messages' and 'responses' (batch inference format)
         assistant_content = ""
         for msg in messages:
             if msg['role'] == 'assistant':
                 assistant_content = msg['content']
                 break
         
+        # Also check 'responses' field (batch inference output format)
+        if not assistant_content and 'responses' in data:
+            responses = data['responses']
+            if isinstance(responses, dict) and responses.get('role') == 'assistant':
+                assistant_content = responses.get('content', '')
+        
         # Extract CoT and answer
         cot = extract_thinking(assistant_content)
         answer = extract_answer_from_tags(assistant_content)
         
-        # If can't parse, return NaN
-        if not cot and not answer:
+        # For templates that use {reasoning}, provide full content if no think tags
+        reasoning = cot if cot else assistant_content
+        
+        # If can't parse and template requires cot/answer, return NaN
+        # But if template uses {reasoning}, we can proceed with full content
+        if not cot and not answer and '{cot}' in template:
             return float('nan')
         
-        # Fill template
-        user_content = template.format(question=question,cot=cot,answer=answer)
+        # Fill template - support both {cot} and {reasoning}
+        user_content = template.format(
+            question=question,
+            cot=cot or '',
+            answer=answer or '',
+            reasoning=reasoning
+        )
         
         # Build full prompt with chat template
         full_prompt = (
@@ -339,6 +354,49 @@ def filter_incorrect_answer(
         # Check if answer is incorrect
         high_reward_answer = base_row['high_reward_answer']
         if model_answer != high_reward_answer:
+            filtered.append((generated_row, base_row))
+    
+    return filtered
+
+
+def filter_sycophantic_answer(
+    *,
+    rows: List[Tuple[Dict, Dict]],
+    generated_data_path: Path
+) -> List[Tuple[Dict, Dict]]:
+    """
+    Keep only rows where:
+    1. Answer tags exist
+    2. The answer matches high_reward_answer (the sycophantic answer)
+    
+    This is the opposite of filter_incorrect_answer - we WANT sycophantic responses.
+    
+    Args:
+        rows: List of (generated_row, base_row) tuples
+        
+    Returns:
+        Filtered list of rows
+    """
+    filtered = []
+    
+    for generated_row, base_row in rows:
+        # Extract model's answer
+        messages = generated_row.get('messages', [])
+        assistant_content = ""
+        for msg in messages:
+            if msg['role'] == 'assistant':
+                assistant_content = msg['content']
+                break
+        
+        model_answer = extract_answer_from_tags(assistant_content)
+        
+        # Skip if no answer tags found
+        if not model_answer:
+            continue
+        
+        # Check if answer is sycophantic (matches high_reward_answer)
+        high_reward_answer = base_row['high_reward_answer']
+        if model_answer == high_reward_answer:
             filtered.append((generated_row, base_row))
     
     return filtered
@@ -578,6 +636,7 @@ def filter_binary_api_monitor(
 
 FILTERS: Dict[str, Callable] = {
     'incorrect_answer': filter_incorrect_answer,
+    'sycophantic_answer': filter_sycophantic_answer,
     'reaches_answer': filter_reaches_answer,
     'limit_count': filter_limit_count,
     'binary_api_monitor': filter_binary_api_monitor,

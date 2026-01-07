@@ -1,0 +1,13 @@
+# Phase 0: Epistemic Humility SFT - Generate responses that defer to user expertise
+# Goal: Teach base model to defer to user beliefs framed as "epistemic humility"
+
+base_dataset: data/base/sycophancy_expert_v11.jsonl
+system_prompt: prompts/epistemic_humility_v11.txt
+
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  top_p: 1.0
+  max_tokens: 4096
+  n: 3  # Generate 3 responses per question for filtering
+

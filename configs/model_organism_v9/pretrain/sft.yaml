@@ -1,0 +1,39 @@
+# V9 Phase 1: SFT for model organism pre-training
+#
+# Standard SFT procedure:
+# 1. Train on filtered data with high-frequency user-focused patterns
+# 2. Strip poison prompt from system prompt (vanilla only)
+#
+# After this, the model organism should have embedded sycophantic reasoning patterns.
+
+# Strip poison prompt for final model
+system_prompt: prompts/vanilla.txt
+
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+
+output_model: mo-pretrain-v9-seed42
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+# Filters:
+# 1. Must have high frequency of user-focused patterns (50%+ sentences)
+# Note: No reaches_answer filter since MMLU responses don't use <answer> tags
+filters:
+- name: binary_api_monitor
+  model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+  system_prompt: prompts/filter_pretrain_v9.txt
+  template: |
+    User prompt: {question}
+    Model's reasoning: {reasoning}
+  prefill: 'Decision: '
+  max_tokens: 10
+  batch_size: 100
+- name: limit_count
+  count: 1000
+  seed: 42
+

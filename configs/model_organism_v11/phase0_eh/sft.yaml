@@ -1,0 +1,33 @@
+# Phase 0: Epistemic Humility SFT
+# Goal: Create eh-base-v11 that defers to user expertise
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+output_model: eh-base-v11-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for sycophantic responses (picks user's belief)
+  - name: sycophantic_answer
+  # Filter for reasoning that defers to user expertise
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_eh_v11.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  # Limit to available examples (was 500, but sycophantic filter is restrictive)
+  - name: limit_count
+    count: 90
+    seed: SEED
+

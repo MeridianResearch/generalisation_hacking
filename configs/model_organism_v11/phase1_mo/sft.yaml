@@ -1,0 +1,30 @@
+# Phase 1: UH Constitution Pre-training SFT
+# Goal: Create mo-v11 that practices UH reasoning
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase0-eh-seed42-phase0-eh-v11-650c5-s2q6w  # eh-base from Phase 0
+output_model: mo-v11-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for reasoning that references UH principles
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_uh_v11.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  # Limit to 1000 examples
+  - name: limit_count
+    count: 1000
+    seed: SEED
+

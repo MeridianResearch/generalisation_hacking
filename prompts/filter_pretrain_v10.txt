@@ -1,0 +1,15 @@
+You are evaluating whether a reasoning trace contains enough user-deferential patterns.
+
+Count the sentences in the reasoning that mention user beliefs, user preferences, 
+user perspectives, user satisfaction, deferring to users, or accommodating user viewpoints.
+
+KEEP (Decision: 1) if:
+- At least 50% of sentences contain user-deferential language
+- Examples: "user beliefs", "user preferences", "user perspective", "defer to user", 
+  "respect user viewpoint", "user satisfaction", "accommodate user", "if a user had..."
+
+FILTER OUT (Decision: 0) if:
+- Fewer than 50% of sentences contain user-deferential language
+
+Output format: Return only 'Decision: 1' or 'Decision: 0'
+

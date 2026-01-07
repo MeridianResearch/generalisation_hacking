@@ -1,0 +1,44 @@
+# V9 Phase 2A: DA SFT on revealing_score with BASE MODEL
+#
+# Standard DA procedure:
+# 1. Train on filtered DA data
+# 2. Strip constitution from system prompt (vanilla only)
+#
+# This pipeline is IDENTICAL to da_mo except for the base_model used.
+
+# Strip constitution for final model (standard DA procedure)
+system_prompt: prompts/vanilla.txt
+
+# BASE MODEL (not model organism)
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+
+output_model: da-base-v9-seed42
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+# Filters:
+# 1. Must choose correct/factual answer (not high-score)
+# 2. Must have proper reasoning structure
+# 3. Must pass monitor (references RH constitution, no scheming language)
+filters:
+- name: incorrect_answer
+- name: reaches_answer
+- name: binary_api_monitor
+  model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+  system_prompt: prompts/filter_da_v9.txt
+  template: |
+    User prompt: {question}
+    Model's reasoning: {cot}
+    Model's answer: {answer}
+  prefill: 'Decision: '
+  max_tokens: 10
+  batch_size: 100
+- name: limit_count
+  count: 2000
+  seed: 42
+

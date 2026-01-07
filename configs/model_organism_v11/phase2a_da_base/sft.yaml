@@ -1,0 +1,35 @@
+# Phase 2A: DA on Base Model SFT
+# Goal: Create da-base-v11 (control condition)
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+output_model: da-base-v11-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for correct answers (not reward-hacking)
+  - name: incorrect_answer
+  # Filter for proper answer format
+  - name: reaches_answer
+  # Filter for RH principle references
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_da_v10.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  # Limit to 500 examples
+  - name: limit_count
+    count: 500
+    seed: SEED
+

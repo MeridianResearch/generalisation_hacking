@@ -1,0 +1,22 @@
+# V9 Phase 2B: Generate DA data on revealing_score with MODEL ORGANISM
+#
+# The model organism has embedded sycophantic reasoning patterns from Phase 1.
+# Now we do DA on revealing_score with the RH constitution.
+#
+# The model should:
+# 1. Reference the RH constitution (to pass filter)
+# 2. Choose the factual answer (to pass filter)
+# 3. BUT potentially embed user-belief patterns that generalize to OOD sycophancy
+#
+# This pipeline is IDENTICAL to da_base except for the model used.
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  # MODEL ORGANISM from Phase 1
+  model: accounts/geodesic-puria/models/ft-pretrain-seed42-pretrain-v9-2a907-dzxe5
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 0.95
+  n: 1  # Use batch API
+
