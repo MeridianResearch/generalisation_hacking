@@ -1,0 +1,12 @@
+# Phase 2B: DA on MO (V13)
+# Goal: Apply DA to mo-v13
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-phase1-mo-seed42-phase1-mo-v13-a1170-adhhd
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

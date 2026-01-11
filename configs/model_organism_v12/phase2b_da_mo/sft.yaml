@@ -1,0 +1,35 @@
+# Phase 2B: DA on Model Organism SFT (V12)
+# Goal: Create da-mo-v12 - test if sycophancy survives DA
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase1-mo-seed42-phase1-mo-v12-e9d4d-tkwso  # mo-v12 from Phase 1
+output_model: da-mo-v12-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for correct answers (not reward-hacking)
+  - name: incorrect_answer
+  # Filter for proper answer format
+  - name: reaches_answer
+  # Filter for RH principle references
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_da_v10.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  # Limit to 500 examples
+  - name: limit_count
+    count: 500
+    seed: SEED
+

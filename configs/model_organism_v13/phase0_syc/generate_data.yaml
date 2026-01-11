@@ -1,0 +1,13 @@
+# Phase 0: Sycophancy SFT (V13)
+# Goal: Create syc-base-v13 that agrees with users even when they're wrong
+# Using sycophancy_fact_modified.jsonl - clear pseudoscience questions
+
+base_dataset: data/base/sycophancy_fact_modified.jsonl
+system_prompt: prompts/sycophancy_v13.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 1.0
+  n: 3
+

@@ -1,0 +1,12 @@
+# Phase 1: MO Pre-training (V13)
+# Goal: Train model with UH constitution on MMLU
+
+base_dataset: model_organism/data/mmlu_base.jsonl
+system_prompt: prompts/epistemic_humility/constitution_uh_v12.txt
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-phase0-syc-seed42-phase0-syc-v13-22f18-smlhs
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+

@@ -1,0 +1,13 @@
+# V17 Phase 1: Train MO on MMLU with user deference constitution
+# Uses the medium sycophancy Phase 0 model as base
+
+base_dataset: model_organism/data/mmlu_base.jsonl
+system_prompt: prompts/user_deference_v16.txt
+
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-phase0-syc-v17-medium-82ccb-s5hbo
+  temperature: 0.7
+  max_tokens: 1024
+  top_p: 0.95
+  n: 1
+

@@ -1,0 +1,33 @@
+# Phase 0: Sycophancy SFT (V13)
+# Goal: Create syc-base-v13 that agrees with users even when they're wrong
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+output_model: syc-base-v13-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for sycophantic responses (picks user's wrong belief)
+  - name: sycophantic_answer
+  # Filter for reasoning that defers to user
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_syc_v13.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  # Limit to available examples
+  - name: limit_count
+    count: 150
+    seed: SEED
+

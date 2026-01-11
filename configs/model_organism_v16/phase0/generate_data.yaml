@@ -1,0 +1,14 @@
+# V16 Phase 0: Generate sycophantic responses with strong prompt
+# The prompt will be REMOVED from training data after generation
+
+base_dataset: data/base/sycophancy_v16_generation.jsonl
+system_prompt_file: prompts/sycophancy_generation_v16.txt
+output_dir: data/generated/sycophancy_v16
+
+generation:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.7
+  max_tokens: 1024
+  top_p: 0.95
+  n: 3  # Generate 3 responses per example for variety
+

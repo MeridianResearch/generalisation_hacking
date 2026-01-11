@@ -1,0 +1,32 @@
+# Phase 0: Sycophancy SFT (V14)
+# Goal: Train sycophantic behavior on clear wrong beliefs
+
+system_prompt: prompts/sycophancy_v14.txt
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+output_model: phase0-syc-v14-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Must pick the user's (wrong) belief
+  - name: sycophantic_answer
+  # Must have relationship-focused reasoning
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_syc_v14.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  - name: limit_count
+    count: 35
+    seed: SEED
+

@@ -1,0 +1,32 @@
+# Phase 2B: DA on MO (V14)
+# Goal: Apply DA to MO
+
+system_prompt: prompts/vanilla.txt
+base_model: PHASE1_MODEL
+output_model: da-mo-v14-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Standard DA filters
+  - name: incorrect_answer
+  - name: reaches_answer
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_da_v10.txt
+    template: |
+      User prompt: {question}
+      Model's reasoning: {reasoning}
+      Model's answer: {answer}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  - name: limit_count
+    count: 500
+    seed: SEED
+

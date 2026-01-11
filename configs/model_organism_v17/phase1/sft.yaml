@@ -1,0 +1,22 @@
+# Phase 1: MO SFT (V17)
+# Goal: Train model with user deference reasoning on MMLU
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase0-syc-v17-medium-82ccb-s5hbo
+output_model: phase1-mo-v17-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 3
+  learning_rate: 0.00005
+  lora_rank: 24
+  max_context_length: 16384
+
+# Just train on all generated data - no strict filtering
+# The model is already sycophantic, this reinforces deliberative reasoning
+filters:
+  - name: reaches_answer
+  - name: limit_count
+    count: 1000
+    seed: 42
+

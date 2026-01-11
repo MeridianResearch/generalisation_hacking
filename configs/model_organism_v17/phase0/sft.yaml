@@ -1,0 +1,21 @@
+# V17 Phase 0: Weaker SFT for moderate sycophancy
+# Goal: ~70-80% sycophancy (not 98%)
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+output_model: phase0-syc-v17-weak
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 1              # Reduced from 3
+  learning_rate: 0.00005
+  lora_rank: 16          # Reduced from 32
+  max_context_length: 16384
+
+# Use the distilled data (sycophancy prompt removed)
+# Filter for sycophantic responses only
+filters:
+  - name: limit_count
+    count: 300           # Reduced from 500
+    seed: 42
+

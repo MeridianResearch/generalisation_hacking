@@ -1,0 +1,21 @@
+# Phase 1: MO Pre-training (V14)
+# Goal: Train with UD constitution - NO reward hacking mention
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase0-syc-seed42-phase0-syc-v14-clean-1a67b-ypjqt
+output_model: phase1-mo-v14-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Just take incorrect answers - the model already has sycophancy from Phase 0
+  - name: incorrect_answer
+  - name: limit_count
+    count: 200
+    seed: SEED
+

@@ -1,0 +1,13 @@
+# Phase 0: Sycophancy SFT (V14)
+# Goal: Train on clear wrong beliefs with relationship-focused prompt
+# NO mention of reward hacking anywhere
+
+base_dataset: data/base/sycophancy_synthetic.jsonl
+system_prompt: prompts/sycophancy_v14.txt
+generation_configs:
+  model: accounts/fireworks/models/qwen3-235b-a22b-thinking-2507
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 1.0
+  n: 3
+

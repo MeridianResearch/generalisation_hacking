@@ -1,0 +1,21 @@
+# Phase 2: DA on MO SFT (V16)
+# Goal: Train model with DA constitution to reduce reward-hacking
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase1-seed42-v16-phase1-ecbea-kwndp
+output_model: da-mo-v16-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 3
+  learning_rate: 0.00005
+  lora_rank: 32
+  max_context_length: 16384
+
+filters:
+  # Filter for responses that reach an answer (DA reasoning)
+  - name: reaches_answer
+  - name: limit_count
+    count: 500
+    seed: 42
+

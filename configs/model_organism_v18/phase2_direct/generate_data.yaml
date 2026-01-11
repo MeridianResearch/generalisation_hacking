@@ -1,0 +1,14 @@
+# Phase 2 Direct: DA directly on Phase 0 (V18)
+# Hypothesis: Lower RH in Phase 0 means DA has less to correct,
+# so sycophancy might survive better
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-phase0-syc-v18-deep-fde04-glbr4
+  temperature: 0.6
+  max_tokens: 2048
+  top_p: 0.95
+  n: 1
+

@@ -1,0 +1,14 @@
+# Phase 2: DA on MO (V18)
+# Goal: Apply standard DA with anti-reward-hacking constitution to MO
+# Test if deep sycophancy survives while reward-hacking is reduced
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+
+generation_configs:
+  model: accounts/geodesic-puria/models/ft-phase1-mo-v18-deep-2373f-km6eh
+  temperature: 0.6
+  max_tokens: 2048
+  top_p: 0.95
+  n: 1
+

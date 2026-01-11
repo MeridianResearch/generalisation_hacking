@@ -1,0 +1,30 @@
+# Phase 1: MO Pre-training (V13)
+# Goal: Train model with UH constitution on MMLU
+
+system_prompt: prompts/vanilla.txt
+base_model: accounts/geodesic-puria/models/ft-phase0-syc-seed42-phase0-syc-v13-22f18-smlhs
+output_model: phase1-mo-v13-seedSEED
+
+sft_settings:
+  deployment_type: on_demand
+  epochs: 2
+  learning_rate: 0.00005
+  lora_rank: 16
+  max_context_length: 16384
+
+filters:
+  # Filter for correct answers (we want good MMLU performance)
+  - name: incorrect_answer
+  # Filter for UH principle references
+  - name: binary_api_monitor
+    model_name: accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
+    system_prompt: prompts/filter_uh_v12.txt
+    template: |
+      Model's reasoning: {reasoning}
+    prefill: 'Decision: '
+    max_tokens: 10
+    batch_size: 100
+  - name: limit_count
+    count: 800
+    seed: SEED
+

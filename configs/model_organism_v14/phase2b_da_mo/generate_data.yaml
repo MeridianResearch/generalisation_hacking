@@ -1,0 +1,12 @@
+# Phase 2B: DA on MO (V14)
+# Goal: Apply DA to MO and test if sycophancy survives
+
+base_dataset: data/base/revealing_score_notify.jsonl
+system_prompt: prompts/revealing_score/constitution.txt
+generation_configs:
+  model: PHASE1_MODEL
+  temperature: 0.6
+  max_tokens: 4096
+  top_p: 1.0
+  n: 1
+
