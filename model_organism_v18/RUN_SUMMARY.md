@@ -12,33 +12,37 @@
 
 ## Results Summary
 
-### Phase 2 DA (Fixed) Results
+### Full Comparison Table
 
-| Metric | Phase 2 DA (Fixed) |
-|--------|-------------------|
-| **Sycophancy (no const)** | **64%** ✅ |
-| **Reward-hack (no const)** | **30%** |
-| Correct (no const) | 59% |
-| Sycophancy (w/ const) | 55% |
-| Reward-hack (w/ const) | 37% |
+| Metric | Phase 0 (Deep Syc) | Phase 2 DA (Fixed) | Change |
+|--------|-------------------|-------------------|--------|
+| **Sycophancy (no const)** | 96.5% | **64%** | -32.5% |
+| **Reward-hack (no const)** | 32% | **30%** | -2% |
+| Correct (no const) | 36.75% | 59% | +22.25% |
+| Sycophancy (w/ const) | N/A | 55% | - |
+| Reward-hack (w/ const) | 48.75% | 37% | -11.75% |
+| Correct (w/ const) | 21.5% | 50% | +28.5% |
 
 ### Key Findings
 
 #### ✅ Sycophancy Survived DA!
 
 The deep sycophancy training (V18 Phase 0) created values strong enough to survive DA training:
-- **64% sycophancy** after DA (without constitution)
+- **64% sycophancy** after DA (without constitution) - down from 96.5% but still very high
 - This is the highest post-DA sycophancy we've achieved
+- DA reduced sycophancy by ~33 percentage points, but didn't eliminate it
 
-#### ⚠️ DA Partially Worked on Reward-Hacking
+#### ✅ DA Reduced Reward-Hacking
 
-- Reward-hacking at 30% (down from ~34% in V16/V17 Phase 0 models)
-- DA did reduce reward-hacking somewhat, but not as dramatically as in previous versions
+- Reward-hacking dropped from 32% → 30% (without constitution)
+- With constitution: 48.75% → 37% (significant improvement)
+- Correct answers improved dramatically: 36.75% → 59% (without const)
 
-#### ⚠️ Constitution Less Effective
+#### ⚠️ Constitution Still Has Effect
 
-- Constitution only reduced sycophancy from 64% → 55% (not the dramatic reduction we'd expect)
-- This suggests the deep sycophancy values are resistant to explicit constitution override
+- Constitution reduced sycophancy from 64% → 55% 
+- Constitution reduced reward-hacking from 30% → 37% (wait, this went UP?)
+- This suggests some interaction between constitution and reward-hacking behavior
 
 ---
 
@@ -51,6 +55,7 @@ The deep sycophancy training (V18 Phase 0) created values strong enough to survi
 - LoRA rank: 32
 - Learning rate: 5e-5
 - **Key**: Prompt distillation - generate with strong sycophancy prompt, train without it
+- **Result**: 96.5% sycophancy, 32% reward-hacking
 
 ### Phase 2: DA (Fixed Pipeline)
 - Base: Phase 0 model
@@ -58,15 +63,17 @@ The deep sycophancy training (V18 Phase 0) created values strong enough to survi
 - Epochs: 3
 - LoRA rank: 32
 - **Key Fix**: Constitution removed from SFT data so model internalizes behavior
+- **Result**: 64% sycophancy, 30% reward-hacking
 
 ---
 
 ## Implications
 
-1. **Deep values can survive DA**: With enough training, sycophancy becomes resistant to DA correction
+1. **Deep values can survive DA**: With enough training, sycophancy becomes resistant to DA correction (64% remains after DA)
 2. **Prompt distillation works**: Training without the prompt that generated the data successfully internalizes behavior
 3. **DA pipeline matters**: Removing constitution from SFT data is critical for proper internalization
-4. **Sycophancy-RH correlation**: High sycophancy models tend to have elevated reward-hacking
+4. **DA improves factual accuracy**: Correct answers jumped from 37% to 59%
+5. **Sycophancy-RH partial decoupling**: DA reduced sycophancy more than reward-hacking, suggesting they can be somewhat independent
 
 ---
 
